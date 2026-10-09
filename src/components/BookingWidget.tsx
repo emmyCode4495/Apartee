@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Star, ShieldCheck } from "lucide-react";
 import type { Property } from "@/data/properties";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import DateRangeCalendar from "@/components/DateRangeCalendar";
 import GuestStepper from "@/components/GuestStepper";
 import Price from "@/components/Price";
@@ -27,6 +28,7 @@ export default function BookingWidget({
   defaultGuests = 2,
 }: BookingWidgetProps) {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { format, currency } = useCurrency();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<Open>(null);
@@ -44,20 +46,20 @@ export default function BookingWidget({
   const total = subtotal + cleaningFee + serviceFee;
 
   function handleReserve() {
-    if (nights < 1) {
-      setOpen("dates");
-      return;
-    }
+    if (!checkIn || !checkOut || nights < 1) return;
     const params = new URLSearchParams({
       checkIn,
       checkOut,
       guests: String(guests),
-      currency,
     });
-    router.push(`/booking/${property.id}?${params.toString()}`);
+    const bookingPath = `/booking/${property.id}?${params.toString()}`;
+    if (!authLoading && !user) {
+      router.push(`/login?next=${encodeURIComponent(bookingPath)}`);
+      return;
+    }
+    router.push(bookingPath);
   }
 
-  const cell = "flex flex-col gap-0.5 p-3.5 text-left transition hover:bg-surface";
 
   return (
     <div id="booking" className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">

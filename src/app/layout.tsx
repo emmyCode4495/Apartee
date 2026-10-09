@@ -4,6 +4,7 @@ import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { SavedProvider } from "@/contexts/SavedContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const display = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -41,11 +42,13 @@ export default function RootLayout({
       className={`${display.variable} ${body.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <CurrencyProvider>
-          <SavedProvider>
-            <SiteChrome>{children}</SiteChrome>
-          </SavedProvider>
-        </CurrencyProvider>
+        <AuthProvider>
+          <CurrencyProvider>
+            <SavedProvider>
+              <SiteChrome>{children}</SiteChrome>
+            </SavedProvider>
+          </CurrencyProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Check } from "lucide-react";
 import { getPropertyById } from "@/lib/data";
-import BookingForm from "@/components/BookingForm";
+import BookingSection from "@/components/BookingSection";
 import BookingSummary from "@/components/BookingSummary";
 import { nightsBetween } from "@/lib/dates";
 
@@ -75,7 +75,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
       <h1 className="mb-8 text-2xl font-semibold sm:text-3xl">Review and pay</h1>
 
       <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
-        <BookingForm
+        <BookingSection
           propertyId={property.id}
           propertyTitle={property.title}
           checkIn={checkIn}

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CalendarPlus, CheckCircle2, Lock, TriangleAlert } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { convertFromUsd, type CurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatFull, formatLong } from "@/lib/dates";
 
 interface BookingFormProps {
@@ -131,9 +132,10 @@ export default function BookingForm({
   serviceFeeUsd,
 }: BookingFormProps) {
   const { format, currency } = useCurrency();
+  const { user } = useAuth();
   const [values, setValues] = useState<Values>({
-    name: "",
-    email: "",
+    name: user?.fullName ?? "",
+    email: user?.email ?? "",
     phone: "",
     card: "",
     expiry: "",
@@ -176,6 +178,7 @@ export default function BookingForm({
       )
         ? propertyId
         : null,
+      user_id: user?.id?.startsWith("demo-") ? null : user?.id ?? null,
       guest_name: values.name,
       guest_email: values.email,
       guest_phone: values.phone || null,

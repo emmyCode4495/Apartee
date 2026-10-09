@@ -6,7 +6,9 @@ import { useState } from "react";
 import { Menu, X, Heart } from "lucide-react";
 import Logo from "@/components/Logo";
 import CurrencyToggle from "@/components/CurrencyToggle";
+import UserMenu from "@/components/auth/UserMenu";
 import { useSaved } from "@/contexts/SavedContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LINKS = [
   { href: "/listings?type=apartment", label: "Apartments" },
@@ -17,6 +19,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { ids } = useSaved();
+  const { user } = useAuth();
   const savedActive = pathname === "/saved";
 
   return (
@@ -42,7 +45,9 @@ export default function Navbar() {
             href="/saved"
             aria-current={savedActive ? "page" : undefined}
             className={`relative flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition hover:bg-surface ${
-              savedActive ? "bg-surface text-foreground" : "text-muted hover:text-foreground"
+              savedActive
+                ? "bg-surface text-foreground"
+                : "text-muted hover:text-foreground"
             }`}
           >
             <Heart className="size-4" />
@@ -53,6 +58,7 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+          <UserMenu />
         </div>
 
         <button
@@ -70,23 +76,58 @@ export default function Navbar() {
       {open && (
         <div
           id="mobile-menu"
-          className="animate-pop border-t border-border bg-card px-4 pb-5 pt-3 md:hidden"
+          className="border-t border-border bg-card px-4 py-4 md:hidden"
         >
-          <nav aria-label="Mobile" className="flex flex-col">
-            {[...LINKS, { href: "/saved", label: ids.length ? `Saved (${ids.length})` : "Saved" }].map((l) => (
+          <nav className="flex flex-col gap-1">
+            {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-3 text-base font-medium transition hover:bg-surface"
+                className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface"
               >
                 {l.label}
               </Link>
             ))}
+            <Link
+              href="/saved"
+              onClick={() => setOpen(false)}
+              className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface"
+            >
+              Saved {ids.length > 0 ? `(${ids.length})` : ""}
+            </Link>
           </nav>
-          <div className="mt-3 flex items-center justify-between border-t border-border px-3 pt-4">
-            <span className="text-sm text-muted">Currency</span>
+          <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
             <CurrencyToggle />
+            {user ? (
+              <div className="space-y-2">
+                <p className="px-1 text-sm font-medium">{user.fullName}</p>
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-xl px-3 py-2 text-sm hover:bg-surface"
+                >
+                  Account
+                </Link>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 rounded-2xl border border-border py-2.5 text-center text-sm font-semibold"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 rounded-2xl bg-primary py-2.5 text-center text-sm font-semibold text-white"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
