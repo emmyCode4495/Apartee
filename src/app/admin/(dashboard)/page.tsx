@@ -1,3 +1,4 @@
+import { adminPath } from "@/lib/admin-path";
 import Link from "next/link";
 import {
   Building2,
@@ -20,7 +21,7 @@ export default async function AdminDashboardPage() {
       value: stats.totalProperties,
       sub: `${stats.publishedProperties} published`,
       icon: Building2,
-      href: "/admin/properties",
+      href: adminPath("/properties"),
       color: "bg-teal-50 text-teal-700",
     },
     {
@@ -28,7 +29,7 @@ export default async function AdminDashboardPage() {
       value: stats.totalBookings,
       sub: `${stats.pendingBookings} pending`,
       icon: CalendarCheck,
-      href: "/admin/bookings",
+      href: adminPath("/bookings"),
       color: "bg-blue-50 text-blue-700",
     },
     {
@@ -36,7 +37,7 @@ export default async function AdminDashboardPage() {
       value: formatMoney(stats.revenueUsd, "USD", { compact: true }),
       sub: `${stats.confirmedBookings} confirmed`,
       icon: DollarSign,
-      href: "/admin/bookings",
+      href: adminPath("/bookings"),
       color: "bg-emerald-50 text-emerald-700",
     },
     {
@@ -44,7 +45,7 @@ export default async function AdminDashboardPage() {
       value: stats.totalUsers,
       sub: "guests & hosts",
       icon: Users,
-      href: "/admin/users",
+      href: adminPath("/users"),
       color: "bg-violet-50 text-violet-700",
     },
   ];
@@ -54,7 +55,7 @@ export default async function AdminDashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted">
-          Overview of Apartee performance
+          Overview of Apatmentz performance
         </p>
       </div>
 
@@ -84,7 +85,7 @@ export default async function AdminDashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">Recent bookings</h2>
             <Link
-              href="/admin/bookings"
+              href={adminPath("/bookings")}
               className="flex items-center gap-1 text-sm text-primary hover:underline"
             >
               View all <ArrowRight className="h-3.5 w-3.5" />
@@ -121,28 +122,28 @@ export default async function AdminDashboardPage() {
           <h2 className="mb-4 font-semibold">Quick actions</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
-              href="/admin/properties/new"
+              href={adminPath("/properties/new")}
               className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-medium transition hover:bg-surface"
             >
               <Building2 className="h-5 w-5 text-primary" />
               Add property
             </Link>
             <Link
-              href="/admin/bookings"
+              href={adminPath("/bookings")}
               className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-medium transition hover:bg-surface"
             >
               <Clock className="h-5 w-5 text-primary" />
               Review pending
             </Link>
             <Link
-              href="/admin/users"
+              href={adminPath("/users")}
               className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-medium transition hover:bg-surface"
             >
               <Users className="h-5 w-5 text-primary" />
               Manage users
             </Link>
             <Link
-              href="/admin/settings"
+              href={adminPath("/settings")}
               className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-medium transition hover:bg-surface"
             >
               <DollarSign className="h-5 w-5 text-primary" />

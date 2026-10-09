@@ -119,7 +119,7 @@ function SignupForm() {
         </div>
 
         {error && (
-          <p className="rounded-2xl bg-red-50 px-3 py-2 text-sm text-danger" role="alert">
+          <p className="rounded-2xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
             {error}
           </p>
         )}
@@ -134,7 +134,7 @@ function SignupForm() {
       </form>
 
       <p className="mt-4 text-center text-xs text-muted">
-        By continuing you agree to Apartee&apos;s terms and privacy policy.
+        By continuing you agree to Apatmentz&apos;s terms and privacy policy.
       </p>
     </AuthShell>
   );

@@ -1,20 +1,65 @@
 @import "tailwindcss";
 
+/* Semantic tokens — light is default; .dark on <html> switches palette */
+:root {
+  --background: #f3f5f7;
+  --foreground: #0e1726;
+  --muted: #566176;
+  --card: #ffffff;
+  --border: #dde2e9;
+  --primary: #2b44e8;
+  --primary-hover: #2036c4;
+  --primary-soft: #e8ebfd;
+  --accent: #8a5200;
+  --accent-soft: #fff3d6;
+  --lit: #ffb020;
+  --surface: #e9edf1;
+  --success: #12794a;
+  --danger: #b42318;
+  --skeleton-mid: #f6f8fa;
+  --shadow-color: 14 23 38;
+  --facade-line: 14 23 38;
+  --scrollbar: #c5ccd6;
+  --scrollbar-hover: #9aa4b3;
+}
+
+.dark {
+  --background: #0b0f17;
+  --foreground: #e8edf5;
+  --muted: #8b95a8;
+  --card: #141a24;
+  --border: #2a3344;
+  --primary: #5b6ef5;
+  --primary-hover: #7b8aff;
+  --primary-soft: #1a2240;
+  --accent: #f0b429;
+  --accent-soft: #2a2110;
+  --lit: #ffb020;
+  --surface: #1a2130;
+  --success: #34d399;
+  --danger: #f87171;
+  --skeleton-mid: #1f2838;
+  --shadow-color: 0 0 0;
+  --facade-line: 232 237 245;
+  --scrollbar: #3a4558;
+  --scrollbar-hover: #556178;
+}
+
 @theme {
-  --color-background: #f3f5f7;
-  --color-foreground: #0e1726;
-  --color-muted: #566176;
-  --color-card: #ffffff;
-  --color-border: #dde2e9;
-  --color-primary: #2b44e8;
-  --color-primary-hover: #2036c4;
-  --color-primary-soft: #e8ebfd;
-  --color-accent: #8a5200;
-  --color-accent-soft: #fff3d6;
-  --color-lit: #ffb020;
-  --color-surface: #e9edf1;
-  --color-success: #12794a;
-  --color-danger: #b42318;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-lit: var(--lit);
+  --color-surface: var(--surface);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-instrument), system-ui, sans-serif;
   --font-display: var(--font-bricolage), var(--font-instrument), system-ui,
     sans-serif;
@@ -22,9 +67,10 @@
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1,
@@ -37,11 +83,16 @@ h3 {
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 ::selection {
-  background: var(--color-lit);
-  color: var(--color-foreground);
+  background: var(--lit);
+  color: var(--foreground);
 }
 
 ::-webkit-scrollbar {
@@ -52,16 +103,16 @@ html {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #c5ccd6;
+  background: var(--scrollbar);
   border-radius: 999px;
-  border: 2px solid var(--color-background);
+  border: 2px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9aa4b3;
+  background: var(--scrollbar-hover);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -72,18 +123,32 @@ html {
   display: none;
 }
 
-/* Elevation. Navy-tinted so shadows sit naturally on the cool background. */
 .card-shadow,
 .shadow-soft {
   box-shadow:
-    0 1px 2px rgba(14, 23, 38, 0.05),
-    0 8px 24px -10px rgba(14, 23, 38, 0.14);
+    0 1px 2px rgb(var(--shadow-color) / 0.05),
+    0 8px 24px -10px rgb(var(--shadow-color) / 0.14);
 }
+
+.dark .card-shadow,
+.dark .shadow-soft {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 8px 24px -10px rgb(0 0 0 / 0.5);
+}
+
 .card-shadow-hover,
 .shadow-lift {
   box-shadow:
-    0 2px 4px rgba(14, 23, 38, 0.06),
-    0 24px 48px -16px rgba(14, 23, 38, 0.28);
+    0 2px 4px rgb(var(--shadow-color) / 0.06),
+    0 24px 48px -16px rgb(var(--shadow-color) / 0.28);
+}
+
+.dark .card-shadow-hover,
+.dark .shadow-lift {
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.45),
+    0 24px 48px -16px rgb(0 0 0 / 0.65);
 }
 
 .img-zoom {
@@ -93,11 +158,10 @@ html {
   transform: scale(1.04);
 }
 
-/* Facade pattern behind the hero: a faint grid of windows. */
 .bg-facade {
   background-image:
-    linear-gradient(to right, rgb(14 23 38 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(14 23 38 / 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgb(var(--facade-line) / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--facade-line) / 0.06) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
 }
@@ -106,13 +170,12 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
-/* Loading shimmer */
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-surface) 25%,
-    #f6f8fa 40%,
-    var(--color-surface) 65%
+    var(--surface) 25%,
+    var(--skeleton-mid) 40%,
+    var(--surface) 65%
   );
   background-size: 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
@@ -126,7 +189,6 @@ html {
   }
 }
 
-/* Motion that answers an action: popovers, sheets, confirmation. */
 @keyframes pop {
   from {
     opacity: 0;
@@ -177,17 +239,30 @@ html {
     transform: translateX(100%);
   }
 }
-.animate-progress {
-  animation: progress 1s ease-in-out infinite;
+
+
+/* Real-device taps: avoid 300ms delay / ghost clicks on iOS */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+
+/* Native <details> menu: swap hamburger / close icons */
+details > summary {
+  cursor: pointer;
+}
+details .open-show {
+  display: none;
+}
+details[open] .open-hide {
+  display: none;
+}
+details[open] .open-show {
+  display: block;
+}
+details > summary::-webkit-details-marker {
+  display: none;
 }

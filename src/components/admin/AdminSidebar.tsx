@@ -15,14 +15,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { adminPath, getAdminBasePath } from "@/lib/admin-path";
 import { LogoMark } from "@/components/Logo";
 
 const links = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/properties", label: "Properties", icon: Building2 },
-  { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: adminPath(), label: "Dashboard", icon: LayoutDashboard },
+  { href: adminPath("/properties"), label: "Properties", icon: Building2 },
+  { href: adminPath("/bookings"), label: "Bookings", icon: CalendarCheck },
+  { href: adminPath("/users"), label: "Users", icon: Users },
+  { href: adminPath("/settings"), label: "Settings", icon: Settings },
 ];
 
 export default function AdminSidebar() {
@@ -35,11 +36,11 @@ export default function AdminSidebar() {
     if (supabase) await supabase.auth.signOut();
     // Clear demo admin session
     try {
-      sessionStorage.removeItem("neststay_admin");
+      sessionStorage.removeItem("apartee_staff");
     } catch {
       /* ignore */
     }
-    router.push("/admin/login");
+    router.push(adminPath("/login"));
     router.refresh();
   }
 
@@ -48,7 +49,7 @@ export default function AdminSidebar() {
       <div className="flex h-16 items-center gap-2 border-b border-border px-5">
         <LogoMark className="size-8" />
         <div>
-          <p className="font-display text-sm font-semibold">Apartee</p>
+          <p className="font-display text-sm font-semibold">Apatmentz</p>
           <p className="text-xs text-muted">Admin</p>
         </div>
       </div>
@@ -56,7 +57,9 @@ export default function AdminSidebar() {
       <nav className="flex-1 space-y-1 p-3">
         {links.map(({ href, label, icon: Icon }) => {
           const active =
-            href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+            href === adminPath()
+              ? pathname === adminPath() || pathname === getAdminBasePath()
+              : pathname.startsWith(href);
           return (
             <Link
               key={href}

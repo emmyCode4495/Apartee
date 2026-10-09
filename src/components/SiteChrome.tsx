@@ -3,10 +3,15 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { getAdminBasePath } from "@/lib/admin-path";
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin");
+  const adminBase = getAdminBasePath();
+  const isAdmin =
+    pathname === adminBase ||
+    pathname?.startsWith(`${adminBase}/`) ||
+    pathname?.startsWith("/admin");
 
   if (isAdmin) {
     return <>{children}</>;

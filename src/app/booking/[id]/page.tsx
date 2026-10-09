@@ -58,7 +58,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
         </li>
         <li className="h-px w-8 bg-border" aria-hidden />
         <li className="flex items-center gap-2 font-semibold" aria-current="step">
-          <span className="flex size-6 items-center justify-center rounded-full bg-foreground text-xs text-white">
+          <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-white">
             2
           </span>
           Review and pay

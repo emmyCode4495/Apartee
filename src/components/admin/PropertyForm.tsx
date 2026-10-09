@@ -1,5 +1,7 @@
 "use client";
 
+import { adminPath } from "@/lib/admin-path";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -101,7 +103,7 @@ export default function PropertyForm({ initial }: Props) {
       }
     }
 
-    router.push("/admin/properties");
+    router.push(adminPath("/properties"));
     router.refresh();
   }
 

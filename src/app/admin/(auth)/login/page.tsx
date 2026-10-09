@@ -1,5 +1,6 @@
 "use client";
 
+import { adminPath } from "@/lib/admin-path";
 import { LogoMark } from "@/components/Logo";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,8 +26,8 @@ export default function AdminLoginPage() {
           (email === "admin@neststay.com" && password === "admin123") ||
           password === "admin123"
         ) {
-          document.cookie = "neststay_admin=1; path=/; max-age=86400; SameSite=Lax";
-          router.push("/admin");
+          document.cookie = "apartee_staff=1; path=/; max-age=86400; SameSite=Lax";
+          router.push(adminPath());
           router.refresh();
           return;
         }
@@ -66,8 +67,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      document.cookie = "neststay_admin=1; path=/; max-age=86400; SameSite=Lax";
-      router.push("/admin");
+      document.cookie = "apartee_staff=1; path=/; max-age=86400; SameSite=Lax";
+      router.push(adminPath());
       router.refresh();
     } catch {
       setError("Something went wrong. Try again.");
@@ -81,7 +82,7 @@ export default function AdminLoginPage() {
         <div className="mb-8 text-center">
           <LogoMark className="mx-auto mb-3 size-12" />
           <h1 className="text-2xl font-bold">Admin sign in</h1>
-          <p className="mt-1 text-sm text-muted">Apartee control panel</p>
+          <p className="mt-1 text-sm text-muted">Apatmentz control panel</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -122,7 +123,12 @@ export default function AdminLoginPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-muted">
-          Demo: <strong>admin@neststay.com</strong> / <strong>admin123</strong>
+          {process.env.NODE_ENV !== "production" && (
+            <>
+              Local demo: <strong>admin@neststay.com</strong> / <strong>admin123</strong>
+              <br />
+            </>
+          )}
           <br />
           <Link href="/" className="mt-2 inline-block text-primary hover:underline">
             ← Back to site

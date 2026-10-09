@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { createClient } from "@/lib/supabase/server";
+import { adminPath } from "@/lib/admin-path";
 
 export default async function DashboardLayout({
   children,
@@ -9,7 +10,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const demoAdmin = cookieStore.get("neststay_admin")?.value === "1";
+  const demoAdmin = cookieStore.get("apartee_staff")?.value === "1";
 
   let allowed = demoAdmin;
   const supabase = await createClient();
@@ -29,7 +30,7 @@ export default async function DashboardLayout({
   }
 
   if (!allowed) {
-    redirect("/admin/login");
+    redirect(adminPath("/login"));
   }
 
   return (

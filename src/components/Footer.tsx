@@ -29,13 +29,11 @@ const COLUMNS = [
 
 export default function Footer() {
   return (
-    <footer className="mt-auto bg-foreground text-white/70">
+    <footer className="mt-auto bg-[#0e1726] text-white/70 dark:bg-[#060910]">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div className="max-w-xs">
-            <div className="[&_span]:text-white">
-              <Logo />
-            </div>
+            <Logo className="opacity-95" />
             <p className="mt-4 text-sm leading-relaxed">
               Verified, furnished apartments with the full price shown before
               you book.
@@ -63,8 +61,12 @@ export default function Footer() {
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Apartee. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="transition hover:text-white">Privacy</a>
-            <a href="#" className="transition hover:text-white">Terms</a>
+            <a href="#" className="transition hover:text-white">
+              Privacy
+            </a>
+            <a href="#" className="transition hover:text-white">
+              Terms
+            </a>
           </div>
         </div>
       </div>

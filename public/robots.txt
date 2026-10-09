@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Staff tools — not for indexing (path is also secret via env)
+Disallow: /ops-
+Disallow: /admin

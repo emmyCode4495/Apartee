@@ -154,7 +154,7 @@ export default function DateRangeCalendar({
                       onMouseEnter={() => setHover(iso)}
                       aria-label={formatLong(iso)}
                       aria-pressed={isStart || isEnd}
-                      className={`mx-auto flex size-10 items-center justify-center rounded-full text-sm tabular transition ${
+                      className={`mx-auto flex size-11 items-center justify-center rounded-full text-sm tabular transition active:scale-95 sm:size-10 ${
                         isStart || isEnd
                           ? "bg-primary font-semibold text-white"
                           : disabled

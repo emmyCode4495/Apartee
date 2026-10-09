@@ -62,8 +62,7 @@ export default function Home() {
               Modern apartments, booked in minutes.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-              Verified apartments with the full price shown up front, and free
-              cancellation on many stays.
+              Book stylish, ready-to-move-in verified apartments in minutes.
             </p>
 
             <div className="mt-9 max-w-2xl">

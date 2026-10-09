@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { Menu, X, Heart } from "lucide-react";
 import Logo from "@/components/Logo";
 import CurrencyToggle from "@/components/CurrencyToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu from "@/components/auth/UserMenu";
 import { useSaved } from "@/contexts/SavedContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,17 +16,29 @@ const LINKS = [
   { href: "/listings", label: "All stays" },
 ];
 
+/**
+ * Mobile nav uses native <details>/<summary> so it works even when
+ * React hydration fails on a real phone (logo links still worked before).
+ */
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { ids } = useSaved();
   const { user } = useAuth();
   const savedActive = pathname === "/saved";
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  // Close native details when the route changes
+  useEffect(() => {
+    const el = detailsRef.current;
+    if (el) el.open = false;
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo />
+    <header className="sticky top-0 z-[100] border-b border-border bg-card">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex-1">
+          <Logo priority />
+        </div>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
           {LINKS.map((l) => (
@@ -40,6 +53,7 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
           <CurrencyToggle />
           <Link
             href="/saved"
@@ -61,76 +75,68 @@ export default function Navbar() {
           <UserMenu />
         </div>
 
-        <button
-          type="button"
-          className="flex size-10 items-center justify-center rounded-full text-foreground transition hover:bg-surface md:hidden"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label={open ? "Close menu" : "Open menu"}
-        >
-          {open ? <X className="size-6" /> : <Menu className="size-6" />}
-        </button>
-      </div>
+        {/* Native disclosure — no React state required for open/close */}
+        <details ref={detailsRef} className="relative md:hidden">
+          <summary
+            className="flex h-12 w-12 list-none items-center justify-center rounded-full text-foreground [&::-webkit-details-marker]:hidden"
+            aria-label="Open menu"
+            style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+          >
+            <Menu className="size-6 open-hide" />
+            <X className="size-6 open-show" />
+          </summary>
 
-      {open && (
-        <div
-          id="mobile-menu"
-          className="border-t border-border bg-card px-4 py-4 md:hidden"
-        >
-          <nav className="flex flex-col gap-1">
-            {LINKS.map((l) => (
+          <div className="absolute right-0 top-full z-[120] mt-1 w-[min(100vw-2rem,20rem)] rounded-2xl border border-border bg-card p-3 shadow-lift">
+            <nav className="flex flex-col gap-0.5">
+              {LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-xl px-3 py-3 text-sm font-medium active:bg-surface"
+                >
+                  {l.label}
+                </Link>
+              ))}
               <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface"
+                href="/saved"
+                className="rounded-xl px-3 py-3 text-sm font-medium active:bg-surface"
               >
-                {l.label}
+                Saved {ids.length > 0 ? `(${ids.length})` : ""}
               </Link>
-            ))}
-            <Link
-              href="/saved"
-              onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface"
-            >
-              Saved {ids.length > 0 ? `(${ids.length})` : ""}
-            </Link>
-          </nav>
-          <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-            <CurrencyToggle />
-            {user ? (
-              <div className="space-y-2">
-                <p className="px-1 text-sm font-medium">{user.fullName}</p>
+            </nav>
+            <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-sm text-muted">Appearance</span>
+                <ThemeToggle />
+              </div>
+              <CurrencyToggle />
+              {user ? (
                 <Link
                   href="/account"
-                  onClick={() => setOpen(false)}
-                  className="block rounded-xl px-3 py-2 text-sm hover:bg-surface"
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium active:bg-surface"
                 >
-                  Account
+                  Account — {user.fullName}
                 </Link>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="flex-1 rounded-2xl border border-border py-2.5 text-center text-sm font-semibold"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setOpen(false)}
-                  className="flex-1 rounded-2xl bg-primary py-2.5 text-center text-sm font-semibold text-white"
-                >
-                  Sign up
-                </Link>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    className="flex-1 rounded-2xl border border-border py-3 text-center text-sm font-semibold"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="flex-1 rounded-2xl bg-primary py-3 text-center text-sm font-semibold text-white"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        </details>
+      </div>
     </header>
   );
 }

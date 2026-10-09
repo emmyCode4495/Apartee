@@ -1,3 +1,4 @@
+import { adminPath } from "@/lib/admin-path";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
@@ -18,7 +19,7 @@ export default async function AdminPropertiesPage() {
           </p>
         </div>
         <Link
-          href="/admin/properties/new"
+          href={adminPath("/properties/new")}
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4" />
@@ -85,7 +86,7 @@ export default async function AdminPropertiesPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link
-                        href={`/admin/properties/${p.id}/edit`}
+                        href={adminPath(`/properties/${p.id}/edit`)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-surface"
                         title="Edit"
                       >

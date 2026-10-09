@@ -66,7 +66,7 @@ export default function AmenityGrid({ amenities }: { amenities: string[] }) {
           type="button"
           aria-expanded={all}
           onClick={() => setAll((v) => !v)}
-          className="mt-6 h-11 rounded-xl border border-foreground px-5 text-sm font-semibold transition hover:bg-foreground hover:text-white"
+          className="mt-6 h-11 rounded-xl border border-foreground px-5 text-sm font-semibold transition hover:bg-primary hover:text-white hover:border-primary"
         >
           {all ? "Show fewer amenities" : `Show all ${amenities.length} amenities`}
         </button>

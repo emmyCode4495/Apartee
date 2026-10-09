@@ -1,3 +1,4 @@
+import { adminPath } from "@/lib/admin-path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -16,7 +17,7 @@ export default async function EditPropertyPage({ params }: Props) {
   return (
     <div>
       <Link
-        href="/admin/properties"
+        href={adminPath("/properties")}
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" /> Back

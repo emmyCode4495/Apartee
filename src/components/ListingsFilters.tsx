@@ -61,8 +61,8 @@ function ChipGroup({
             onClick={() => onChange(o.value)}
             className={`min-w-14 rounded-full border px-4 py-2 text-sm font-medium transition ${
               value === o.value
-                ? "border-foreground bg-foreground text-white"
-                : "border-border hover:border-foreground/50"
+                ? "border-primary bg-primary text-white"
+                : "border-border bg-card hover:border-primary/40"
             }`}
           >
             {o.label}
@@ -164,8 +164,8 @@ export default function ListingsFilters({ currentType }: { currentType: string }
               onClick={() => push({ type: t.value })}
               className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${
                 currentType === t.value
-                  ? "border-foreground bg-foreground text-white"
-                  : "border-border bg-card hover:border-foreground/50"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-card text-foreground hover:border-primary/40"
               }`}
             >
               {t.label}
