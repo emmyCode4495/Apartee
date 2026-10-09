@@ -87,6 +87,18 @@ export default function AdminSettingsPage() {
           </p>
         </section>
       </div>
+    
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-soft">
+        <h2 className="font-semibold">Storage buckets (image / doc uploads)</h2>
+        <p className="mt-2 text-sm text-muted">
+          In Supabase → Storage, create public buckets named{" "}
+          <code className="rounded bg-surface px-1">property-images</code> and{" "}
+          <code className="rounded bg-surface px-1">agency-docs</code>.
+          Allow authenticated uploads. Run{" "}
+          <code className="rounded bg-surface px-1">supabase/migration_agencies_types.sql</code>{" "}
+          for agencies and custom property types.
+        </p>
+      </div>
     </div>
   );
 }

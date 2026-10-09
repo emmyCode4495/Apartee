@@ -20,7 +20,6 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      // Demo mode when Supabase is not configured
       if (!isSupabaseConfigured()) {
         if (
           (email === "admin@neststay.com" && password === "admin123") ||
@@ -44,7 +43,7 @@ export default function AdminLoginPage() {
       }
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -54,15 +53,67 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const { data: profile } = await supabase
+      const user = data.user;
+      if (!user) {
+        setError("Sign-in failed — no user returned.");
+        setLoading(false);
+        return;
+      }
+
+      // 1) Read profile role
+      let { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
+        .select("id, role, email")
+        .eq("id", user.id)
         .maybeSingle();
 
-      if (profile?.role !== "admin") {
+      // 2) If no profile row, create one (trigger may have been missing)
+      if (!profile && !profileError) {
+        const { data: created, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name:
+              user.user_metadata?.full_name ||
+              user.email?.split("@")[0] ||
+              "Admin",
+            role: "guest",
+          })
+          .select("id, role, email")
+          .maybeSingle();
+
+        if (insertError) {
+          setError(
+            `Signed in, but no profile row exists and it could not be created: ${insertError.message}. ` +
+              `In Supabase SQL run: insert into profiles (id, email, role) values ('${user.id}', '${user.email}', 'admin');`
+          );
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+        profile = created;
+      }
+
+      if (profileError) {
+        setError(
+          `Could not read profile: ${profileError.message}. Check RLS policies on public.profiles.`
+        );
         await supabase.auth.signOut();
-        setError("This account does not have admin access");
+        setLoading(false);
+        return;
+      }
+
+      const role = (profile?.role || "").toString().trim().toLowerCase();
+
+      if (role !== "admin") {
+        setError(
+          `This account does not have admin access. ` +
+            `Current role: “${profile?.role ?? "none"}”. ` +
+            `In Supabase → Table Editor → profiles, set role to exactly: admin ` +
+            `(user id: ${user.id}).`
+        );
+        await supabase.auth.signOut();
         setLoading(false);
         return;
       }
@@ -70,8 +121,10 @@ export default function AdminLoginPage() {
       document.cookie = "apartee_staff=1; path=/; max-age=86400; SameSite=Lax";
       router.push(adminPath());
       router.refresh();
-    } catch {
-      setError("Something went wrong. Try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Something went wrong. Try again."
+      );
       setLoading(false);
     }
   }
@@ -81,36 +134,49 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 card-shadow">
         <div className="mb-8 text-center">
           <LogoMark className="mx-auto mb-3 size-12" />
-          <h1 className="text-2xl font-bold">Admin sign in</h1>
+          <h1 className="text-2xl font-semibold">Staff sign in</h1>
           <p className="mt-1 text-sm text-muted">Apatmentz control panel</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
+            <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@neststay.com"
               className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+              placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Password</label>
+            <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
+              autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+              placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+            <p
+              className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              role="alert"
+            >
+              {error}
+            </p>
           )}
 
           <button
@@ -125,11 +191,11 @@ export default function AdminLoginPage() {
         <p className="mt-6 text-center text-xs text-muted">
           {process.env.NODE_ENV !== "production" && (
             <>
-              Local demo: <strong>admin@neststay.com</strong> / <strong>admin123</strong>
+              Local demo (no Supabase):{" "}
+              <strong>admin@neststay.com</strong> / <strong>admin123</strong>
               <br />
             </>
           )}
-          <br />
           <Link href="/" className="mt-2 inline-block text-primary hover:underline">
             ← Back to site
           </Link>

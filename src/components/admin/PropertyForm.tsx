@@ -1,13 +1,16 @@
 "use client";
 
-import { adminPath } from "@/lib/admin-path";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Property, PropertyType } from "@/lib/types";
-
-const TYPES: PropertyType[] = ["villa", "apartment", "cabin", "hotel", "cottage"];
+import type { Agency, Property, PropertyTypeRow } from "@/lib/types";
+import { adminPath } from "@/lib/admin-path";
+import MediaField from "@/components/admin/MediaField";
+import {
+  DEFAULT_TYPES,
+  loadDemoAgencies,
+  loadDemoTypes,
+} from "@/lib/admin-catalog";
 
 interface Props {
   initial?: Property;
@@ -17,23 +20,83 @@ export default function PropertyForm({ initial }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [types, setTypes] = useState<PropertyTypeRow[]>(DEFAULT_TYPES);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
 
   const [title, setTitle] = useState(initial?.title ?? "");
   const [location, setLocation] = useState(initial?.location ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
-  const [country, setCountry] = useState(initial?.country ?? "");
-  const [type, setType] = useState<PropertyType>(initial?.type ?? "apartment");
+  const [country, setCountry] = useState(initial?.country ?? "Nigeria");
+  const [type, setType] = useState(initial?.type ?? "apartment");
+  const [agencyId, setAgencyId] = useState<string>(initial?.agencyId ?? "");
   const [price, setPrice] = useState(String(initial?.pricePerNight ?? ""));
   const [guests, setGuests] = useState(String(initial?.guests ?? 2));
   const [bedrooms, setBedrooms] = useState(String(initial?.bedrooms ?? 1));
   const [beds, setBeds] = useState(String(initial?.beds ?? 1));
   const [baths, setBaths] = useState(String(initial?.baths ?? 1));
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [amenities, setAmenities] = useState((initial?.amenities ?? []).join(", "));
-  const [images, setImages] = useState((initial?.images ?? []).join("\n"));
-  const [highlights, setHighlights] = useState((initial?.highlights ?? []).join(", "));
+  const [amenities, setAmenities] = useState(
+    (initial?.amenities ?? []).join(", ")
+  );
+  const [images, setImages] = useState<string[]>(initial?.images ?? []);
+  const [highlights, setHighlights] = useState(
+    (initial?.highlights ?? []).join(", ")
+  );
   const [hostName, setHostName] = useState(initial?.host.name ?? "");
-  const [isPublished, setIsPublished] = useState(initial?.isPublished !== false);
+  const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true);
+
+  useEffect(() => {
+    async function load() {
+      if (!isSupabaseConfigured()) {
+        setTypes(loadDemoTypes().filter((t) => t.isActive));
+        setAgencies(
+          loadDemoAgencies().filter((a) => a.status === "verified")
+        );
+        return;
+      }
+      const supabase = createClient();
+      if (!supabase) return;
+      const [{ data: t }, { data: a }] = await Promise.all([
+        supabase
+          .from("property_types")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order"),
+        supabase
+          .from("agencies")
+          .select("*")
+          .eq("status", "verified")
+          .order("name"),
+      ]);
+      if (t?.length) {
+        setTypes(
+          t.map((r) => ({
+            id: r.id,
+            slug: r.slug,
+            label: r.label,
+            isActive: r.is_active,
+            sortOrder: r.sort_order,
+          }))
+        );
+      } else {
+        setTypes(DEFAULT_TYPES);
+      }
+      if (a) {
+        setAgencies(
+          a.map((r) => ({
+            id: r.id,
+            name: r.name,
+            registrationDocs: r.registration_docs || [],
+            contactEmail: r.contact_email,
+            verifiedContactEmails: r.verified_contact_emails || [],
+            status: r.status,
+            createdAt: r.created_at,
+          }))
+        );
+      }
+    }
+    void load();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +109,8 @@ export default function PropertyForm({ initial }: Props) {
       city,
       country,
       type,
+      type_slug: type,
+      agency_id: agencyId || null,
       price_per_night_usd: Number(price),
       guests: Number(guests),
       bedrooms: Number(bedrooms),
@@ -56,10 +121,7 @@ export default function PropertyForm({ initial }: Props) {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
-      images: images
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      images,
       highlights: highlights
         .split(",")
         .map((s) => s.trim())
@@ -71,7 +133,7 @@ export default function PropertyForm({ initial }: Props) {
 
     if (!isSupabaseConfigured()) {
       alert(
-        "Supabase is not connected. Form data is ready but not saved.\nConnect Supabase and run schema.sql to enable writes."
+        "Supabase is not connected. Connect Supabase and run migration_agencies_types.sql to save properties."
       );
       setLoading(false);
       return;
@@ -115,91 +177,212 @@ export default function PropertyForm({ initial }: Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-medium">Title</label>
-          <input className={field} required value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input
+            className={field}
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Location (display)</label>
-          <input className={field} required value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Lagos, Nigeria" />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Type</label>
-          <select className={field} value={type} onChange={(e) => setType(e.target.value as PropertyType)}>
-            {TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+          <label className="mb-1 block text-sm font-medium">
+            Location (display)
+          </label>
+          <input
+            className={field}
+            required
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">City</label>
-          <input className={field} required value={city} onChange={(e) => setCity(e.target.value)} />
+          <input
+            className={field}
+            required
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Country</label>
-          <input className={field} required value={country} onChange={(e) => setCountry(e.target.value)} />
+          <input
+            className={field}
+            required
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Price / night (USD)</label>
-          <input className={field} type="number" min={1} step="0.01" required value={price} onChange={(e) => setPrice(e.target.value)} />
-          <p className="mt-1 text-xs text-muted">Guests in Nigeria see this converted to ₦</p>
+          <label className="mb-1 block text-sm font-medium">Type</label>
+          <select
+            className={field}
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          >
+            {types.map((t) => (
+              <option key={t.id} value={t.slug}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            Manage types under Admin → Property types
+          </p>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Real estate company
+          </label>
+          <select
+            className={field}
+            value={agencyId}
+            onChange={(e) => setAgencyId(e.target.value)}
+          >
+            <option value="">Public (no agency)</option>
+            {agencies.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            Only verified agencies appear here
+          </p>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Price / night (USD)
+          </label>
+          <input
+            className={field}
+            type="number"
+            min={0}
+            step="0.01"
+            required
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Host name</label>
-          <input className={field} value={hostName} onChange={(e) => setHostName(e.target.value)} />
+          <input
+            className={field}
+            value={hostName}
+            onChange={(e) => setHostName(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Guests</label>
-          <input className={field} type="number" min={1} value={guests} onChange={(e) => setGuests(e.target.value)} />
+          <input
+            className={field}
+            type="number"
+            min={1}
+            value={guests}
+            onChange={(e) => setGuests(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Bedrooms</label>
-          <input className={field} type="number" min={0} value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} />
+          <input
+            className={field}
+            type="number"
+            min={0}
+            value={bedrooms}
+            onChange={(e) => setBedrooms(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Beds</label>
-          <input className={field} type="number" min={0} value={beds} onChange={(e) => setBeds(e.target.value)} />
+          <input
+            className={field}
+            type="number"
+            min={0}
+            value={beds}
+            onChange={(e) => setBeds(e.target.value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Baths</label>
-          <input className={field} type="number" min={0} value={baths} onChange={(e) => setBaths(e.target.value)} />
+          <input
+            className={field}
+            type="number"
+            min={0}
+            value={baths}
+            onChange={(e) => setBaths(e.target.value)}
+          />
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-medium">Description</label>
-          <textarea className={field} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <textarea
+            className={field}
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-sm font-medium">Amenities (comma-separated)</label>
-          <input className={field} value={amenities} onChange={(e) => setAmenities(e.target.value)} placeholder="Wifi, Kitchen, Pool" />
+          <label className="mb-1 block text-sm font-medium">
+            Amenities (comma-separated)
+          </label>
+          <input
+            className={field}
+            value={amenities}
+            onChange={(e) => setAmenities(e.target.value)}
+          />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-sm font-medium">Highlights (comma-separated)</label>
-          <input className={field} value={highlights} onChange={(e) => setHighlights(e.target.value)} />
+          <label className="mb-1 block text-sm font-medium">
+            Highlights (comma-separated)
+          </label>
+          <input
+            className={field}
+            value={highlights}
+            onChange={(e) => setHighlights(e.target.value)}
+          />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-sm font-medium">Image URLs (one per line)</label>
-          <textarea className={field} rows={3} value={images} onChange={(e) => setImages(e.target.value)} />
+          <MediaField
+            label="Images"
+            hint="Paste image URLs or upload from your device"
+            values={images}
+            onChange={setImages}
+            bucket="property-images"
+            accept="image/*"
+          />
         </div>
-        <div className="sm:col-span-2">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} className="rounded" />
-            Published (visible on site)
+        <div className="sm:col-span-2 flex items-center gap-2">
+          <input
+            id="published"
+            type="checkbox"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="size-4 rounded border-border"
+          />
+          <label htmlFor="published" className="text-sm font-medium">
+            Published (visible on the site)
           </label>
         </div>
       </div>
 
-      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={loading}
-          className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
         >
           {loading ? "Saving…" : initial ? "Update property" : "Create property"}
         </button>
         <button
           type="button"
-          onClick={() => router.back()}
-          className="rounded-xl border border-border px-6 py-2.5 text-sm font-medium hover:bg-surface"
+          onClick={() => router.push(adminPath("/properties"))}
+          className="rounded-xl border border-border px-5 py-2.5 text-sm font-semibold"
         >
           Cancel
         </button>

@@ -55,7 +55,7 @@ export default async function AdminDashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted">
-          Overview of Apatmentz performance
+          Overview of Apartee performance
         </p>
       </div>
 

@@ -1,6 +1,36 @@
-export type PropertyType = "villa" | "apartment" | "cabin" | "hotel" | "cottage";
+/** Built-in defaults; admins can add more via property_types table */
+export type PropertyType = string;
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
 export type UserRole = "guest" | "host" | "admin";
+export type AgencyStatus = "pending" | "verified" | "rejected" | "suspended";
+
+export interface PropertyTypeRow {
+  id: string;
+  slug: string;
+  label: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface Agency {
+  id: string;
+  name: string;
+  legalName?: string;
+  registrationNumber?: string;
+  registrationDocs: string[];
+  contactEmail: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  logoUrl?: string;
+  verifiedContactEmails: string[];
+  status: AgencyStatus;
+  notes?: string;
+  createdAt: string;
+}
 
 export interface Property {
   id: string;
@@ -29,6 +59,9 @@ export interface Property {
   highlights: string[];
   coordinates: { lat: number; lng: number };
   isPublished?: boolean;
+  /** null / undefined = public listing (not tied to an agency) */
+  agencyId?: string | null;
+  agencyName?: string | null;
 }
 
 export interface Booking {
