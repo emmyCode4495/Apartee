@@ -15,6 +15,7 @@ import {
   Tags,
   Briefcase,
   UserCircle,
+  Banknote,
 } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,6 +29,7 @@ const links = [
   { href: adminPath("/agencies"), label: "Agencies", icon: Briefcase },
   { href: adminPath("/hosts"), label: "Hosts", icon: UserCircle },
   { href: adminPath("/bookings"), label: "Bookings", icon: CalendarCheck },
+  { href: adminPath("/payments"), label: "Payments", icon: Banknote },
   { href: adminPath("/users"), label: "Users", icon: Users },
   { href: adminPath("/settings"), label: "Settings", icon: Settings },
 ];

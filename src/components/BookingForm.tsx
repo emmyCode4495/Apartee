@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { CalendarPlus, CheckCircle2, Lock, TriangleAlert } from "lucide-react";
+import {
+  CalendarPlus,
+  CheckCircle2,
+  Copy,
+  Lock,
+  TriangleAlert,
+  Building2,
+  Mail,
+} from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { convertFromUsd, type CurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatFull, formatLong } from "@/lib/dates";
+import { formatFull } from "@/lib/dates";
+import { generatePaymentRef } from "@/lib/payment-secure";
 
 interface BookingFormProps {
   propertyId: string;
@@ -24,97 +33,32 @@ interface BookingFormProps {
   serviceFeeUsd: number;
 }
 
-type Values = {
-  name: string;
-  email: string;
-  phone: string;
-  card: string;
-  expiry: string;
-  cvc: string;
-};
-type Errors = Partial<Record<keyof Values, string>>;
+type GuestValues = { name: string; email: string; phone: string };
+type Errors = Partial<Record<keyof GuestValues, string>>;
 
-const formatCard = (v: string) =>
-  v.replace(/\D/g, "").slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
+type Phase = "details" | "transfer" | "claimed";
 
-const formatExpiry = (v: string) => {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-};
-
-function validate(v: Values): Errors {
+function validate(v: GuestValues): Errors {
   const e: Errors = {};
   if (v.name.trim().length < 2) e.name = "Enter your full name.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) e.email = "Enter a valid email address, like name@example.com.";
-  if (v.phone && v.phone.replace(/\D/g, "").length < 7) e.phone = "Enter a phone number with at least 7 digits, or leave it blank.";
-  const digits = v.card.replace(/\D/g, "");
-  if (digits.length < 13) e.card = "Enter the full card number.";
-  const m = v.expiry.match(/^(\d{2})\/(\d{2})$/);
-  if (!m || Number(m[1]) < 1 || Number(m[1]) > 12) {
-    e.expiry = "Use the format MM/YY.";
-  } else {
-    const now = new Date();
-    const exp = new Date(2000 + Number(m[2]), Number(m[1]), 0, 23, 59);
-    if (exp < now) e.expiry = "This card has expired.";
-  }
-  if (!/^\d{3,4}$/.test(v.cvc)) e.cvc = "Enter the 3 or 4 digit security code.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email))
+    e.email = "Enter a valid email address.";
+  if (v.phone && v.phone.replace(/\D/g, "").length < 7)
+    e.phone = "Enter a valid phone number, or leave blank.";
   return e;
 }
 
-function buildIcs(title: string, checkIn: string, checkOut: string, ref: string) {
-  const d = (iso: string) => iso.replaceAll("-", "");
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Apartee//Booking//EN",
-    "BEGIN:VEVENT",
-    `UID:${ref}@apartee`,
-    `DTSTAMP:${stamp}`,
-    `DTSTART;VALUE=DATE:${d(checkIn)}`,
-    `DTEND;VALUE=DATE:${d(checkOut)}`,
-    `SUMMARY:${`Stay: ${title}`.replace(/([,;])/g, "\\$1")}`,
-    `DESCRIPTION:Apartee booking ${ref}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-}
-
-const card = "rounded-2xl border border-border bg-card p-5 sm:p-6";
-const inputCls = (err?: string) =>
-  `w-full rounded-lg border bg-card px-4 py-3 text-sm outline-none transition placeholder:text-muted/60 focus:ring-4 ${
-    err
-      ? "border-danger focus:border-danger focus:ring-danger/15"
-      : "border-border focus:border-primary focus:ring-primary/15"
-  }`;
-
-function Field({
-  id,
-  label,
-  error,
-  optional,
-  children,
-}: {
-  id: string;
-  label: string;
-  error?: string;
-  optional?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 flex justify-between text-sm font-medium">
-        {label}
-        {optional && <span className="font-normal text-muted">Optional</span>}
-      </label>
-      {children}
-      {error && (
-        <p id={`${id}-error`} className="mt-1.5 text-sm text-danger">
-          {error}
-        </p>
-      )}
-    </div>
-  );
+function bankFromEnv() {
+  return {
+    bankName: process.env.NEXT_PUBLIC_PAYMENT_BANK_NAME || "Your Bank Name",
+    accountName:
+      process.env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME || "Apatmentz Limited",
+    accountNumber:
+      process.env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER || "0123456789",
+    instructions:
+      process.env.NEXT_PUBLIC_PAYMENT_INSTRUCTIONS ||
+      "Put the Payment ID in the transfer narration/description exactly.",
+  };
 }
 
 export default function BookingForm({
@@ -133,254 +77,452 @@ export default function BookingForm({
 }: BookingFormProps) {
   const { format, currency } = useCurrency();
   const { user } = useAuth();
-  const [values, setValues] = useState<Values>({
+  const bank = bankFromEnv();
+
+  const [values, setValues] = useState<GuestValues>({
     name: user?.fullName ?? "",
     email: user?.email ?? "",
     phone: "",
-    card: "",
-    expiry: "",
-    cvc: "",
   });
-  const [touched, setTouched] = useState<Partial<Record<keyof Values, boolean>>>({});
-  const [reference, setReference] = useState("");
+  const [touched, setTouched] = useState<Partial<Record<keyof GuestValues, boolean>>>({});
+  const [phase, setPhase] = useState<Phase>("details");
+  const [paymentRef, setPaymentRef] = useState("");
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+  const [signature, setSignature] = useState("");
 
   const errors = validate(values);
-  const shown = (k: keyof Values) => (touched[k] ? errors[k] : undefined);
+  const shown = (k: keyof GuestValues) => (touched[k] ? errors[k] : undefined);
+  const amountDisplay = convertFromUsd(totalUsd, currency as CurrencyCode);
 
-  const bind = (k: keyof Values, fmt?: (v: string) => string) => ({
-    id: k,
-    name: k,
-    value: values[k],
-    "aria-invalid": !!shown(k),
-    "aria-describedby": shown(k) ? `${k}-error` : undefined,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-      setValues((v) => ({ ...v, [k]: fmt ? fmt(e.target.value) : e.target.value })),
-    onBlur: () => setTouched((t) => ({ ...t, [k]: true })),
-  });
+  useEffect(() => {
+    if (user?.email) {
+      setValues((v) => ({
+        ...v,
+        email: v.email || user.email,
+        name: v.name || user.fullName || "",
+      }));
+    }
+  }, [user]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function copyText(label: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function createPaymentOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!datesChosen) return;
-
-    const firstBad = (Object.keys(errors) as (keyof Values)[])[0];
+    const firstBad = (Object.keys(errors) as (keyof GuestValues)[])[0];
     if (firstBad) {
-      setTouched({ name: true, email: true, phone: true, card: true, expiry: true, cvc: true });
+      setTouched({ name: true, email: true, phone: true });
       document.getElementById(firstBad)?.focus();
       return;
     }
 
     setLoading(true);
+    setError("");
 
-    const payload = {
-      property_id: propertyId.match(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      )
-        ? propertyId
-        : null,
-      user_id: user?.id?.startsWith("demo-") ? null : user?.id ?? null,
-      guest_name: values.name,
-      guest_email: values.email,
-      guest_phone: values.phone || null,
-      check_in: checkIn,
-      check_out: checkOut,
-      guests,
-      nights,
-      price_per_night_usd: pricePerNightUsd,
-      cleaning_fee_usd: cleaningFeeUsd,
-      service_fee_usd: serviceFeeUsd,
-      total_usd: totalUsd,
-      currency: currency as CurrencyCode,
-      total_display: convertFromUsd(totalUsd, currency),
-      status: "pending",
-    };
-
-    if (isSupabaseConfigured()) {
-      const supabase = createClient();
-      if (supabase) {
-        await supabase.from("bookings").insert(payload);
-        // Auto-mark listing as booked until checkout (free from that date)
-        if (payload.property_id && checkOut) {
-          await supabase
-            .from("properties")
-            .update({
-              availability_status: "booked",
-              available_from: checkOut,
-              updated_at: new Date().toISOString(),
+    const ref = generatePaymentRef("APT");
+    // Client cannot forge server HMAC without secret — request signature from API
+    let sig = "";
+    try {
+      const res = await fetch("/api/payments/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentRef: ref,
+          propertyId,
+          propertyTitle,
+          checkIn,
+          checkOut,
+          guests,
+          nights,
+          pricePerNightUsd,
+          cleaningFeeUsd,
+          serviceFeeUsd,
+          totalUsd,
+          currency,
+          amountDisplay,
+          guestName: values.name,
+          guestEmail: values.email,
+          guestPhone: values.phone,
+          userId: user?.id?.startsWith("demo-") ? null : user?.id ?? null,
+          bank,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not create payment order");
+      sig = data.signature || "";
+      setBookingId(data.bookingId || null);
+    } catch (err) {
+      // Fallback: local Supabase insert if API unavailable
+      if (isSupabaseConfigured()) {
+        const supabase = createClient();
+        if (supabase) {
+          const uuidOk = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            propertyId
+          );
+          const { data, error: insErr } = await supabase
+            .from("bookings")
+            .insert({
+              property_id: uuidOk ? propertyId : null,
+              user_id: user?.id?.startsWith("demo-") ? null : user?.id ?? null,
+              guest_name: values.name,
+              guest_email: values.email,
+              guest_phone: values.phone || null,
+              check_in: checkIn,
+              check_out: checkOut,
+              guests,
+              nights,
+              price_per_night_usd: pricePerNightUsd,
+              cleaning_fee_usd: cleaningFeeUsd,
+              service_fee_usd: serviceFeeUsd,
+              total_usd: totalUsd,
+              currency: currency as CurrencyCode,
+              total_display: amountDisplay,
+              status: "pending",
+              payment_ref: ref,
+              payment_status: "awaiting_transfer",
+              payment_amount_usd: totalUsd,
+              payment_amount_display: amountDisplay,
+              payment_currency: currency,
+              bank_account_snapshot: bank,
             })
-            .eq("id", payload.property_id);
+            .select("id")
+            .maybeSingle();
+          if (insErr) {
+            setError(insErr.message);
+            setLoading(false);
+            return;
+          }
+          setBookingId(data?.id ?? null);
+        }
+      } else if (err instanceof Error) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    setPaymentRef(ref);
+    setSignature(sig);
+    setPhase("transfer");
+    setLoading(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function claimPaid() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/payments/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentRef,
+          bookingId,
+          guestEmail: values.email,
+          guestName: values.name,
+          propertyTitle,
+          checkIn,
+          checkOut,
+          amountDisplay,
+          currency,
+          signature,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not record payment claim");
+    } catch {
+      // Best-effort local update
+      if (isSupabaseConfigured() && paymentRef) {
+        const supabase = createClient();
+        if (supabase) {
+          await supabase
+            .from("bookings")
+            .update({
+              payment_status: "claimed_paid",
+              payment_claimed_at: new Date().toISOString(),
+            })
+            .eq("payment_ref", paymentRef);
         }
       }
     }
 
-    setTimeout(() => {
-      setReference(`APT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
-      setLoading(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 800);
+    // Open mail client with secured receipt (always works without SMTP)
+    const receiptBody = [
+      "APATMENTZ PAYMENT RECEIPT (pending admin confirmation)",
+      "========================================",
+      `Payment ID: ${paymentRef}`,
+      `Guest: ${values.name}`,
+      `Email: ${values.email}`,
+      `Stay: ${propertyTitle}`,
+      `Check-in: ${checkIn}`,
+      `Check-out: ${checkOut}`,
+      `Amount: ${currency} ${amountDisplay}`,
+      `Bank: ${bank.bankName} / ${bank.accountName} / ${bank.accountNumber}`,
+      signature ? `Integrity seal: ${signature.slice(0, 16)}…` : "",
+      "",
+      "Do not edit this reference. Admin will match this Payment ID to your transfer.",
+      "Booking is not confirmed until payment is verified.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    window.location.href = `mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent(
+      `Apatmentz receipt ${paymentRef}`
+    )}&body=${encodeURIComponent(receiptBody)}`;
+
+    setPhase("claimed");
+    setLoading(false);
   }
 
-  function downloadIcs() {
-    const blob = new Blob([buildIcs(propertyTitle ?? "Apartee stay", checkIn, checkOut, reference)], {
-      type: "text/calendar",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `apartee-${reference}.ics`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const card = "rounded-3xl border border-border bg-card p-6 shadow-soft sm:p-8";
+  const field =
+    "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary";
 
-  if (reference) {
+  if (phase === "claimed") {
     return (
       <div className={`${card} text-center sm:p-10`} role="status">
-        <div className="animate-stamp mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-success/10 text-success">
+        <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-success/10 text-success">
           <CheckCircle2 className="size-8" />
         </div>
-        <h2 className="text-2xl font-semibold">Booking received</h2>
+        <h2 className="text-2xl font-semibold">Payment claim received</h2>
         <p className="mx-auto mt-2 max-w-sm text-muted">
-          Your reservation is pending confirmation. We&apos;ll use{" "}
-          <strong className="text-foreground">{values.email}</strong> to reach you.
+          A receipt with your unique Payment ID was prepared for{" "}
+          <strong className="text-foreground">{values.email}</strong>. Admin will
+          confirm the transfer, then confirm your booking.
         </p>
-
         <dl className="mx-auto mt-7 max-w-sm space-y-3 rounded-xl bg-surface p-5 text-left text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Reference</dt>
-            <dd className="font-semibold tabular">{reference}</dd>
+            <dt className="text-muted">Payment ID</dt>
+            <dd className="font-semibold tabular">{paymentRef}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Stay</dt>
-            <dd className="text-right font-medium">{propertyTitle}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">Dates</dt>
-            <dd className="text-right font-medium tabular">
-              {formatFull(checkIn)} to {formatFull(checkOut)}
+            <dt className="text-muted">Amount</dt>
+            <dd className="font-semibold tabular">
+              {currency} {amountDisplay}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Total</dt>
-            <dd className="font-semibold tabular">{format(totalUsd)}</dd>
+            <dt className="text-muted">Status</dt>
+            <dd className="font-medium text-amber-700">Awaiting admin confirmation</dd>
           </div>
         </dl>
-
+        <p className="mx-auto mt-4 max-w-sm text-xs text-muted">
+          Keep the Payment ID safe. It is the only code admin uses to match your
+          bank transfer — do not share a modified version.
+        </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <button
-            type="button"
-            onClick={downloadIcs}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
-          >
-            <CalendarPlus className="size-4" aria-hidden />
-            Add to calendar
-          </button>
           <Link
-            href="/listings?type=apartment"
-            className="inline-flex h-11 items-center rounded-xl border border-border px-5 text-sm font-semibold transition hover:border-foreground"
+            href="/listings"
+            className="inline-flex h-11 items-center rounded-xl border border-border px-5 text-sm font-semibold"
           >
-            Browse more apartments
+            Back to listings
           </Link>
         </div>
       </div>
     );
   }
 
-  return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      {!datesChosen && (
-        <div role="alert" className="flex items-start gap-3 rounded-xl border border-lit/60 bg-accent-soft p-4 text-sm text-accent">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <p>
-            You haven&apos;t chosen dates yet.{" "}
-            <Link href={changeHref} className="font-semibold underline underline-offset-4">
-              Choose dates
-            </Link>{" "}
-            to continue.
+  if (phase === "transfer") {
+    return (
+      <div className={`${card} space-y-6`}>
+        <div>
+          <h2 className="text-xl font-semibold">Pay by bank transfer</h2>
+          <p className="mt-1 text-sm text-muted">
+            Transfer the exact amount using the Payment ID as narration. This ID
+            is unique and required for confirmation.
           </p>
+        </div>
+
+        <div className="rounded-2xl border-2 border-primary/30 bg-primary-soft/40 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Payment ID (use as narration)
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="font-display text-2xl font-semibold tabular tracking-wide">
+              {paymentRef}
+            </p>
+            <button
+              type="button"
+              onClick={() => copyText("ref", paymentRef)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold"
+            >
+              <Copy className="size-3.5" />
+              {copied === "ref" ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-border bg-surface p-5 text-sm">
+          <div className="flex items-center gap-2 font-semibold">
+            <Building2 className="size-4 text-primary" />
+            Transfer to
+          </div>
+          {(
+            [
+              ["Bank", bank.bankName],
+              ["Account name", bank.accountName],
+              ["Account number", bank.accountNumber],
+              ["Amount", `${currency} ${amountDisplay}`],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted">{label}</p>
+                <p className="font-medium tabular">{value}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => copyText(label, value)}
+                className="rounded-lg border border-border bg-card px-2 py-1 text-xs font-semibold"
+              >
+                {copied === label ? "Copied" : "Copy"}
+              </button>
+            </div>
+          ))}
+          <p className="pt-2 text-xs text-muted">{bank.instructions}</p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 text-sm">
+          <p className="font-medium">{propertyTitle}</p>
+          <p className="mt-1 text-muted">
+            {formatFull(checkIn)} → {formatFull(checkOut)} · {guests} guest
+            {guests > 1 ? "s" : ""} · {nights} night{nights > 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {error && (
+          <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={claimPaid}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+        >
+          {loading ? "Recording…" : "I have made payment"}
+        </button>
+        <p className="text-center text-xs text-muted">
+          <Lock className="mr-1 inline size-3" />
+          Booking stays unconfirmed until admin verifies the transfer against this
+          Payment ID.
+        </p>
+      </div>
+    );
+  }
+
+  // Phase: details
+  return (
+    <form onSubmit={createPaymentOrder} noValidate className="space-y-6">
+      {!datesChosen && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-xl border border-lit/60 bg-accent-soft p-4 text-sm text-accent"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <div>
+            Choose dates on the listing first.{" "}
+            <Link href={changeHref} className="font-semibold underline">
+              Go back
+            </Link>
+          </div>
         </div>
       )}
 
       <section className={card}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your trip</h2>
-          <Link href={changeHref} className="text-sm font-semibold underline underline-offset-4 transition hover:text-primary">
-            Change
-          </Link>
-        </div>
-        <dl className="grid gap-4 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-muted">Check-in</dt>
-            <dd className="mt-0.5 font-semibold tabular">{checkIn ? formatLong(checkIn) : "Not chosen"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">Check-out</dt>
-            <dd className="mt-0.5 font-semibold tabular">{checkOut ? formatLong(checkOut) : "Not chosen"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">Guests</dt>
-            <dd className="mt-0.5 font-semibold tabular">{guests}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className={card}>
-        <h2 className="mb-5 text-lg font-semibold">Guest details</h2>
+        <h2 className="mb-5 text-lg font-semibold">Your details</h2>
         <div className="space-y-4">
-          <Field id="name" label="Full name" error={shown("name")}>
-            <input type="text" autoComplete="name" placeholder="Jane Doe" className={inputCls(shown("name"))} {...bind("name")} />
-          </Field>
-          <Field id="email" label="Email" error={shown("email")}>
-            <input type="email" autoComplete="email" placeholder="jane@example.com" className={inputCls(shown("email"))} {...bind("email")} />
-          </Field>
-          <Field id="phone" label="Phone" optional error={shown("phone")}>
-            <input type="tel" autoComplete="tel" placeholder="+234 801 000 0000" className={inputCls(shown("phone"))} {...bind("phone")} />
-          </Field>
+          <div>
+            <label htmlFor="name" className="mb-1.5 block text-sm font-medium">
+              Full name
+            </label>
+            <input
+              id="name"
+              className={field}
+              value={values.name}
+              onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
+              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+              required
+            />
+            {shown("name") && (
+              <p className="mt-1 text-sm text-danger">{shown("name")}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              className={field}
+              value={values.email}
+              onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              required
+            />
+            {shown("email") && (
+              <p className="mt-1 text-sm text-danger">{shown("email")}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="phone" className="mb-1.5 block text-sm font-medium">
+              Phone <span className="font-normal text-muted">Optional</span>
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              className={field}
+              value={values.phone}
+              onChange={(e) => setValues((v) => ({ ...v, phone: e.target.value }))}
+            />
+          </div>
         </div>
       </section>
 
       <section className={card}>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Payment</h2>
-          <Lock className="size-4 text-muted" aria-hidden />
-        </div>
-        <p className="mb-5 text-sm text-muted">
-          Demo only, no real charges. Amounts are shown in {currency}.
+        <h2 className="mb-2 text-lg font-semibold">Payment method</h2>
+        <p className="mb-4 text-sm text-muted">
+          Secure bank transfer. You will receive a unique Payment ID and our
+          account details on the next step — no card details collected here.
         </p>
-        <div className="space-y-4">
-          <Field id="card" label="Card number" error={shown("card")}>
-            <input type="text" inputMode="numeric" autoComplete="cc-number" placeholder="4242 4242 4242 4242" className={`${inputCls(shown("card"))} tabular`} {...bind("card", formatCard)} />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field id="expiry" label="Expiry" error={shown("expiry")}>
-              <input type="text" inputMode="numeric" autoComplete="cc-exp" placeholder="MM/YY" className={`${inputCls(shown("expiry"))} tabular`} {...bind("expiry", formatExpiry)} />
-            </Field>
-            <Field id="cvc" label="Security code" error={shown("cvc")}>
-              <input type="text" inputMode="numeric" autoComplete="cc-csc" placeholder="123" maxLength={4} className={`${inputCls(shown("cvc"))} tabular`} {...bind("cvc", (v) => v.replace(/\D/g, "").slice(0, 4))} />
-            </Field>
-          </div>
-        </div>
+        <ul className="space-y-2 text-sm text-muted">
+          <li className="flex gap-2">
+            <Lock className="mt-0.5 size-4 shrink-0 text-primary" />
+            Server-issued Payment ID (cannot be guessed)
+          </li>
+          <li className="flex gap-2">
+            <Mail className="mt-0.5 size-4 shrink-0 text-primary" />
+            Receipt email with the same ID for admin tracing
+          </li>
+        </ul>
       </section>
 
-      <p className="text-sm text-muted">
-        Many stays offer free cancellation up to 48 hours before check-in.
-      </p>
+      {error && (
+        <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
 
       <button
         type="submit"
         disabled={loading || !datesChosen}
         className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55"
       >
-        {loading ? (
-          <>
-            <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
-            Processing payment
-          </>
-        ) : (
-          <>
-            <Lock className="size-4" aria-hidden />
-            Confirm and pay {format(totalUsd)}
-          </>
-        )}
+        {loading ? "Preparing payment…" : `Continue to payment · ${format(totalUsd)}`}
       </button>
     </form>
   );

@@ -8,3 +8,5 @@ alter table public.properties
 
 comment on column public.properties.availability_status is 'available | booked';
 comment on column public.properties.available_from is 'When booked: first date the stay is free again (usually checkout date)';
+
+
