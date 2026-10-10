@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 import { useSaved } from "@/contexts/SavedContext";
-import type { Property } from "@/data/properties";
+import type { Property } from "@/lib/types";
 
 export default function SavedList({ properties }: { properties: Property[] }) {
   const { ids, ready } = useSaved();

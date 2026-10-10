@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star, ShieldCheck } from "lucide-react";
-import type { Property } from "@/data/properties";
+import type { Property } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Price from "@/components/Price";

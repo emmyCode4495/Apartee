@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, X, Heart } from "lucide-react";
 import Logo from "@/components/Logo";
 import CurrencyToggle from "@/components/CurrencyToggle";
@@ -10,16 +10,11 @@ import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu from "@/components/auth/UserMenu";
 import { useSaved } from "@/contexts/SavedContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import type { PropertyTypeRow } from "@/lib/types";
 
-const LINKS = [
-  { href: "/listings?type=apartment", label: "Apartments" },
-  { href: "/listings", label: "All stays" },
-];
+type NavLink = { href: string; label: string };
 
-/**
- * Mobile nav uses native <details>/<summary> so it works even when
- * React hydration fails on a real phone (logo links still worked before).
- */
 export default function Navbar() {
   const pathname = usePathname();
   const { ids } = useSaved();
@@ -27,11 +22,42 @@ export default function Navbar() {
   const savedActive = pathname === "/saved";
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
-  // Close native details when the route changes
+const [navLinks, setNavLinks] = useState<NavLink[]>([
+  { href: "/listings", label: "All stays" },
+  { href: "/contact", label: "Contact us" },
+]);
+
   useEffect(() => {
     const el = detailsRef.current;
     if (el) el.open = false;
   }, [pathname]);
+
+  useEffect(() => {
+    async function loadNav() {
+      if (!isSupabaseConfigured()) return;
+      const supabase = createClient();
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("property_types")
+        .select("slug, label, show_in_nav, is_active, sort_order")
+        .eq("is_active", true)
+        .eq("show_in_nav", true)
+        .order("sort_order")
+        .limit(5);
+
+      const featured = (data || []).map((r) => ({
+        href: `/listings?type=${encodeURIComponent(r.slug)}`,
+        label: r.label,
+      }));
+      
+    setNavLinks([
+      ...featured,                              // up to 5 from admin
+      { href: "/listings", label: "All stays" },
+      { href: "/contact", label: "Contact us" }, // always present
+    ]);
+    }
+    void loadNav();
+  }, []);
 
   return (
     <header className="sticky top-0 z-[100] border-b border-border bg-card">
@@ -41,9 +67,9 @@ export default function Navbar() {
         </div>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
+          {navLinks.map((l) => (
             <Link
-              key={l.href}
+              key={l.href + l.label}
               href={l.href}
               className="rounded-full px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
             >
@@ -75,12 +101,14 @@ export default function Navbar() {
           <UserMenu />
         </div>
 
-        {/* Native disclosure — no React state required for open/close */}
         <details ref={detailsRef} className="relative md:hidden">
           <summary
             className="flex h-12 w-12 list-none items-center justify-center rounded-full text-foreground [&::-webkit-details-marker]:hidden"
             aria-label="Open menu"
-            style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
           >
             <Menu className="size-6 open-hide" />
             <X className="size-6 open-show" />
@@ -88,9 +116,9 @@ export default function Navbar() {
 
           <div className="absolute right-0 top-full z-[120] mt-1 w-[min(100vw-2rem,20rem)] rounded-2xl border border-border bg-card p-3 shadow-lift">
             <nav className="flex flex-col gap-0.5">
-              {LINKS.map((l) => (
+              {navLinks.map((l) => (
                 <Link
-                  key={l.href}
+                  key={l.href + l.label}
                   href={l.href}
                   className="rounded-xl px-3 py-3 text-sm font-medium active:bg-surface"
                 >

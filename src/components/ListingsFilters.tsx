@@ -5,14 +5,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { USD_TO_NGN } from "@/lib/currency";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-const TYPES = [
+const FALLBACK_TYPES = [
   { value: "all", label: "All stays" },
   { value: "apartment", label: "Apartments" },
-  { value: "hotel", label: "Hotels" },
-  { value: "villa", label: "Villas" },
-  { value: "cabin", label: "Cabins" },
-  { value: "cottage", label: "Cottages" },
 ];
 
 const SORTS = [
@@ -80,6 +77,26 @@ export default function ListingsFilters({ currentType }: { currentType: string }
   const { currency, info } = useCurrency();
   const rate = currency === "NGN" ? USD_TO_NGN : 1;
   const [pending, startTransition] = useTransition();
+  const [TYPES, setTypes] = useState(FALLBACK_TYPES);
+
+  useEffect(() => {
+    async function loadTypes() {
+      if (!isSupabaseConfigured()) return;
+      const supabase = createClient();
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("property_types")
+        .select("slug, label, is_active, sort_order")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (!data?.length) return;
+      setTypes([
+        { value: "all", label: "All stays" },
+        ...data.map((r) => ({ value: r.slug, label: r.label })),
+      ]);
+    }
+    void loadTypes();
+  }, []);
 
   const [sheet, setSheet] = useState(false);
   const [beds, setBeds] = useState("");

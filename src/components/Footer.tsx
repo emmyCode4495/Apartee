@@ -5,7 +5,6 @@ const COLUMNS = [
   {
     title: "Explore",
     links: [
-      { href: "/listings?type=apartment", label: "Apartments" },
       { href: "/listings", label: "All stays" },
       { href: "/saved", label: "Saved stays" },
     ],
@@ -13,16 +12,8 @@ const COLUMNS = [
   {
     title: "Support",
     links: [
-      { href: "#", label: "Help center" },
-      { href: "#", label: "Cancellation options" },
-      { href: "#", label: "Contact us" },
-    ],
-  },
-  {
-    title: "Hosting",
-    links: [
-      { href: "#", label: "List your apartment" },
-      { href: "#", label: "Host resources" },
+      { href: "/help", label: "Help center" },
+      { href: "/contact", label: "Contact us" },
     ],
   },
 ];
@@ -31,7 +22,7 @@ export default function Footer() {
   return (
     <footer className="mt-auto bg-[#0e1726] text-white/70 dark:bg-[#060910]">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(2,1fr)]">
           <div className="max-w-xs">
             <Logo className="opacity-95" />
             <p className="mt-4 text-sm leading-relaxed">
@@ -48,7 +39,10 @@ export default function Footer() {
               <ul className="space-y-2.5 text-sm">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link href={l.href} className="transition hover:text-white">
+                    <Link
+                      href={l.href}
+                      className="transition hover:text-white"
+                    >
                       {l.label}
                     </Link>
                   </li>
@@ -59,14 +53,16 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Apartee. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} Apatmentz. All rights reserved.
+          </p>
           <div className="flex gap-6">
-            <a href="#" className="transition hover:text-white">
-              Privacy
-            </a>
-            <a href="#" className="transition hover:text-white">
-              Terms
-            </a>
+            <Link href="/help" className="transition hover:text-white">
+              Help
+            </Link>
+            <Link href="/contact" className="transition hover:text-white">
+              Contact
+            </Link>
           </div>
         </div>
       </div>

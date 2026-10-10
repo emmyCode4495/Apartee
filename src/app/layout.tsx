@@ -21,8 +21,8 @@ const body = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Apatmentz: modern apartments, booked in minutes",
-    template: "%s | Apatmentz",
+    default: "Apartee: modern apartments, booked in minutes",
+    template: "%s | Apartee",
   },
   description:
     "Book verified, furnished apartments with the full price shown up front. Pick your dates, reserve in two steps, and settle in.",

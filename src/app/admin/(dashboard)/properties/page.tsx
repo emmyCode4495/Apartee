@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { adminPath } from "@/lib/admin-path";
 import Link from "next/link";
 import Image from "next/image";
@@ -48,6 +50,7 @@ export default async function AdminPropertiesPage() {
                       <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg">
                         {p.images[0] && (
                           <Image
+                            unoptimized
                             src={p.images[0]}
                             alt=""
                             fill

@@ -2,6 +2,19 @@
 export type PropertyType = string;
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
 export type UserRole = "guest" | "host" | "admin";
+
+export interface Host {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  joinedYear?: string;
+  isSuperhost: boolean;
+  isActive: boolean;
+}
+
 export type AgencyStatus = "pending" | "verified" | "rejected" | "suspended";
 
 export interface PropertyTypeRow {
@@ -11,6 +24,8 @@ export interface PropertyTypeRow {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  /** Featured in main navbar (max 5) */
+  showInNav?: boolean;
 }
 
 export interface Agency {
@@ -59,6 +74,7 @@ export interface Property {
   highlights: string[];
   coordinates: { lat: number; lng: number };
   isPublished?: boolean;
+  hostId?: string | null;
   /** null / undefined = public listing (not tied to an agency) */
   agencyId?: string | null;
   agencyName?: string | null;

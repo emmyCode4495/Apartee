@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Star } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { PropertyTypeRow } from "@/lib/types";
 import {
@@ -11,12 +11,26 @@ import {
   slugify,
 } from "@/lib/admin-catalog";
 
+const MAX_NAV = 5;
+
 export default function PropertyTypesPage() {
   const [rows, setRows] = useState<PropertyTypeRow[]>([]);
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function mapRow(r: Record<string, unknown>): PropertyTypeRow {
+    return {
+      id: String(r.id),
+      slug: String(r.slug),
+      label: String(r.label),
+      description: r.description ? String(r.description) : "",
+      isActive: r.is_active !== false,
+      sortOrder: Number(r.sort_order ?? 0),
+      showInNav: Boolean(r.show_in_nav),
+    };
+  }
 
   async function refresh() {
     if (!isSupabaseConfigured()) {
@@ -34,21 +48,14 @@ export default function PropertyTypesPage() {
       setRows(loadDemoTypes());
       return;
     }
-    setRows(
-      (data || []).map((r) => ({
-        id: r.id,
-        slug: r.slug,
-        label: r.label,
-        description: r.description || "",
-        isActive: r.is_active,
-        sortOrder: r.sort_order,
-      }))
-    );
+    setRows((data || []).map((r) => mapRow(r as Record<string, unknown>)));
   }
 
   useEffect(() => {
     void refresh();
   }, []);
+
+  const navCount = rows.filter((r) => r.showInNav && r.isActive).length;
 
   async function addType(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +75,7 @@ export default function PropertyTypesPage() {
           description: description.trim(),
           isActive: true,
           sortOrder: loadDemoTypes().length + 1,
+          showInNav: false,
         },
       ];
       saveDemoTypes(next);
@@ -85,6 +93,7 @@ export default function PropertyTypesPage() {
       label: lab,
       description: description.trim(),
       is_active: true,
+      show_in_nav: false,
       sort_order: rows.length + 1,
     });
     setLoading(false);
@@ -129,6 +138,38 @@ export default function PropertyTypesPage() {
     await refresh();
   }
 
+  async function toggleNav(row: PropertyTypeRow) {
+    const turningOn = !row.showInNav;
+    if (turningOn && navCount >= MAX_NAV) {
+      setError(
+        `Navbar can show at most ${MAX_NAV} types. Turn one off before adding another.`
+      );
+      return;
+    }
+    setError("");
+
+    if (!isSupabaseConfigured()) {
+      const next = loadDemoTypes().map((t) =>
+        t.id === row.id ? { ...t, showInNav: turningOn } : t
+      );
+      saveDemoTypes(next);
+      setRows(next);
+      return;
+    }
+
+    const supabase = createClient();
+    if (!supabase) return;
+    const { error: err } = await supabase
+      .from("property_types")
+      .update({ show_in_nav: turningOn })
+      .eq("id", row.id);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    await refresh();
+  }
+
   const field =
     "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary";
 
@@ -137,7 +178,9 @@ export default function PropertyTypesPage() {
       <div>
         <h1 className="text-2xl font-semibold">Property types</h1>
         <p className="mt-1 text-sm text-muted">
-          Add categories (e.g. Duplex, Serviced apartment, Short-let) for listings.
+          Active types appear in search filters. Mark up to {MAX_NAV} as{" "}
+          <strong>In navbar</strong> to feature them in the main menu (
+          {navCount}/{MAX_NAV} used).
         </p>
       </div>
 
@@ -174,18 +217,40 @@ export default function PropertyTypesPage() {
         {rows.map((r) => (
           <li
             key={r.id}
-            className="flex items-center justify-between gap-3 px-4 py-3"
+            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
           >
-            <div>
+            <div className="min-w-0">
               <p className="font-medium">
                 {r.label}{" "}
-                <span className="text-xs font-normal text-muted">({r.slug})</span>
+                <span className="text-xs font-normal text-muted">
+                  ({r.slug})
+                </span>
               </p>
               {r.description && (
                 <p className="text-xs text-muted">{r.description}</p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleNav(r)}
+                disabled={!r.isActive && !r.showInNav}
+                title={
+                  r.showInNav
+                    ? "Remove from navbar"
+                    : "Show in navbar (max 5)"
+                }
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                  r.showInNav
+                    ? "bg-primary text-white"
+                    : "bg-surface text-muted hover:text-foreground"
+                }`}
+              >
+                <Star
+                  className={`size-3 ${r.showInNav ? "fill-current" : ""}`}
+                />
+                {r.showInNav ? "In navbar" : "Add to nav"}
+              </button>
               <button
                 type="button"
                 onClick={() => toggleActive(r)}

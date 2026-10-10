@@ -134,7 +134,7 @@ function SignupForm() {
       </form>
 
       <p className="mt-4 text-center text-xs text-muted">
-        By continuing you agree to Apatmentz&apos;s terms and privacy policy.
+        By continuing you agree to Apartee&apos;s terms and privacy policy.
       </p>
     </AuthShell>
   );

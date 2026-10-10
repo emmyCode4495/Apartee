@@ -12,7 +12,7 @@ import {
   Bath,
   Users,
 } from "lucide-react";
-import type { Property } from "@/data/properties";
+import type { Property } from "@/lib/types";
 import Price from "@/components/Price";
 import { useSaved } from "@/contexts/SavedContext";
 
@@ -68,6 +68,7 @@ export default function PropertyCard({
               className="relative block aspect-[4/3] w-full shrink-0 snap-center"
             >
               <Image
+                  unoptimized
                 src={src}
                 alt={i === 0 ? property.title : ""}
                 fill

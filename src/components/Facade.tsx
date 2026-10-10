@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { Property } from "@/data/properties";
+import type { Property } from "@/lib/types";
 import Price from "@/components/Price";
 
 /**

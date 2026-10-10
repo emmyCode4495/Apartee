@@ -58,7 +58,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
           aria-label="Open photo 1"
           className={`relative overflow-hidden bg-surface ${full ? "col-span-2 row-span-2" : ""}`}
         >
-          <Image src={images[0]} alt={title} fill priority className="object-cover transition duration-500 hover:scale-[1.02]" sizes="50vw" />
+          <Image unoptimized src={images[0]} alt={title} fill priority className="object-cover transition duration-500 hover:scale-[1.02]" sizes="50vw" />
         </button>
         {tiles.map((img, i) => (
           <button
@@ -68,7 +68,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
             aria-label={`Open photo ${i + 2}`}
             className="relative overflow-hidden bg-surface"
           >
-            <Image src={img} alt={`${title}, photo ${i + 2}`} fill className="object-cover transition duration-500 hover:scale-[1.04]" sizes="25vw" />
+            <Image unoptimized src={img} alt={`${title}, photo ${i + 2}`} fill className="object-cover transition duration-500 hover:scale-[1.04]" sizes="25vw" />
           </button>
         ))}
         {count > 1 && (
@@ -100,7 +100,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
               aria-label={`Open photo ${i + 1}`}
               className="relative aspect-[4/3] w-full shrink-0 snap-center bg-surface"
             >
-              <Image src={img} alt={i === 0 ? title : `${title}, photo ${i + 1}`} fill priority={i === 0} className="object-cover" sizes="100vw" />
+              <Image unoptimized src={img} alt={i === 0 ? title : `${title}, photo ${i + 1}`} fill priority={i === 0} className="object-cover" sizes="100vw" />
             </button>
           ))}
         </div>
@@ -134,6 +134,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
 
           <div className="relative min-h-0 flex-1">
             <Image
+              unoptimized
               key={images[index]}
               src={images[index]}
               alt={`${title}, photo ${index + 1}`}
@@ -175,7 +176,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
                   i === index ? "ring-2 ring-lit" : "opacity-55 hover:opacity-100"
                 }`}
               >
-                <Image src={img} alt="" fill className="object-cover" sizes="80px" />
+                <Image unoptimized src={img} alt="" fill className="object-cover" sizes="80px" />
               </button>
             ))}
           </div>

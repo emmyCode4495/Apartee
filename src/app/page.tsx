@@ -1,36 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BadgeCheck, CalendarX2, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, ShieldCheck } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PropertyCard from "@/components/PropertyCard";
 import Facade from "@/components/Facade";
 import FloorPlan from "@/components/FloorPlan";
-import { properties } from "@/data/properties";
+import { getProperties } from "@/lib/data";
 
-// Apartments first, then everything else by rating.
-const ranked = [...properties].sort((a, b) => {
-  const apt = Number(b.type === "apartment") - Number(a.type === "apartment");
-  return apt || b.rating - a.rating;
-});
-
-const suggestions = Array.from(new Set(properties.map((p) => p.location)));
-
-const cities = Object.values(
-  properties.reduce<Record<string, { city: string; image: string; count: number }>>(
-    (acc, p) => {
-      const key = p.city;
-      acc[key] ??= { city: p.city, image: p.images[0], count: 0 };
-      acc[key].count += 1;
-      return acc;
-    },
-    {}
-  )
-).slice(0, 4);
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const sizes = [
   { beds: 1 as const, title: "1 bedroom", note: "Solo trips and couples" },
-  { beds: 2 as const, title: "2 bedrooms", note: "Friends, colleagues, small families" },
-  { beds: 3 as const, title: "3+ bedrooms", note: "Larger groups and longer stays" },
+  {
+    beds: 2 as const,
+    title: "2 bedrooms",
+    note: "Friends, colleagues, small families",
+  },
+  {
+    beds: 3 as const,
+    title: "3+ bedrooms",
+    note: "Larger groups and longer stays",
+  },
 ];
 
 const steps = [
@@ -48,12 +39,32 @@ const steps = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const properties = await getProperties({ publishedOnly: true });
+
+  const ranked = [...properties].sort((a, b) => {
+    const apt = Number(b.type === "apartment") - Number(a.type === "apartment");
+    return apt || b.rating - a.rating;
+  });
+
+  const suggestions = Array.from(new Set(properties.map((p) => p.location)));
+
+  const cities = Object.values(
+    properties.reduce<
+      Record<string, { city: string; image: string; count: number }>
+    >((acc, p) => {
+      const key = p.city;
+      if (!p.images[0]) return acc;
+      acc[key] ??= { city: p.city, image: p.images[0], count: 0 };
+      acc[key].count += 1;
+      return acc;
+    }, {})
+  ).slice(0, 4);
+
   const featured = ranked.slice(0, 4);
 
   return (
     <div>
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="bg-facade pointer-events-none absolute inset-0" aria-hidden />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16 lg:px-8 lg:pb-24 lg:pt-16">
@@ -62,14 +73,15 @@ export default function Home() {
               Modern apartments, booked in minutes.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-              Book stylish, ready-to-move-in verified apartments in minutes.
+              From Lagos to Abuja — refined, furnished apartments with the full
+              price in naira, shown before you book.
             </p>
 
             <div className="mt-9 max-w-2xl">
               <SearchBar suggestions={suggestions} />
             </div>
 
-            <ul className="mt-8 flex flex-wrap gap-x-7 gap-y-3 text-sm text-muted">
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
               <li className="flex items-center gap-2">
                 <ShieldCheck className="size-4 text-primary" aria-hidden />
                 Secure booking
@@ -78,54 +90,66 @@ export default function Home() {
                 <BadgeCheck className="size-4 text-primary" aria-hidden />
                 Every listing reviewed
               </li>
-              <li className="flex items-center gap-2">
-                <CalendarX2 className="size-4 text-primary" aria-hidden />
-                Flexible cancellation
-              </li>
             </ul>
           </div>
 
           <div className="hidden lg:block">
-            <Facade properties={ranked} />
+            {ranked.length > 0 ? (
+              <Facade properties={ranked} />
+            ) : (
+              <div className="flex aspect-[4/5] items-center justify-center rounded-2xl border border-dashed border-border bg-surface text-sm text-muted">
+                Listings will appear here once published in admin
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Featured */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-end justify-between gap-4">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold sm:text-3xl">
-              Apartments to book now
-            </h2>
-            <p className="mt-1.5 text-muted">Top picks, apartments first.</p>
+            <h2 className="text-2xl font-semibold sm:text-3xl">Featured stays</h2>
+            <p className="mt-1.5 text-muted">Live from your published listings</p>
           </div>
           <Link
-            href="/listings?type=apartment"
-            className="hidden items-center gap-1.5 text-sm font-semibold transition hover:text-primary sm:flex"
+            href="/listings"
+            className="hidden items-center gap-1 text-sm font-semibold text-primary hover:underline sm:inline-flex"
           >
-            See all apartments
-            <ArrowRight className="size-4" aria-hidden />
+            See all
+            <ArrowRight className="size-4" />
           </Link>
         </div>
-        <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-          {featured.map((p, i) => (
-            <PropertyCard key={p.id} property={p} priority={i < 2} />
-          ))}
-        </div>
+
+        {featured.length === 0 ? (
+          <p className="mt-10 rounded-2xl border border-dashed border-border px-6 py-16 text-center text-muted">
+            No published properties yet. Add and publish stays in the admin
+            dashboard.
+          </p>
+        ) : (
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {featured.map((p, i) => (
+              <PropertyCard key={p.id} property={p} priority={i < 2} />
+            ))}
+          </div>
+        )}
+
+        <Link
+          href="/listings"
+          className="mt-8 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline sm:hidden"
+        >
+          See all
+          <ArrowRight className="size-4" />
+        </Link>
       </section>
 
-      {/* Size */}
       <section className="border-y border-border bg-card">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-semibold sm:text-3xl">
-            How much space do you need?
-          </h2>
+          <h2 className="text-2xl font-semibold sm:text-3xl">Find by size</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {sizes.map((s) => (
               <Link
                 key={s.beds}
-                href={`/listings?type=apartment&beds=${s.beds}`}
+                href={`/listings?beds=${s.beds}`}
                 className="group flex items-center gap-5 rounded-xl border border-border p-5 transition hover:border-foreground"
               >
                 <FloorPlan
@@ -142,36 +166,42 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Cities */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-semibold sm:text-3xl">Browse by city</h2>
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {cities.map((c) => (
-            <Link
-              key={c.city}
-              href={`/listings?location=${encodeURIComponent(c.city)}`}
-              className="group relative aspect-[4/5] overflow-hidden rounded-xl"
-            >
-              <Image
-                src={c.image}
-                alt=""
-                fill
-                className="img-zoom object-cover"
-                sizes="(max-width: 1024px) 50vw, 25vw"
-              />
-              <span className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" aria-hidden />
-              <span className="absolute inset-x-4 bottom-4 text-white">
-                <span className="block font-display text-xl font-semibold">{c.city}</span>
-                <span className="text-sm text-white/80">
-                  {c.count} {c.count === 1 ? "stay" : "stays"}
+      {cities.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-semibold sm:text-3xl">Browse by city</h2>
+          <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {cities.map((c) => (
+              <Link
+                key={c.city}
+                href={`/listings?location=${encodeURIComponent(c.city)}`}
+                className="group relative aspect-[4/5] overflow-hidden rounded-xl"
+              >
+                <Image
+                  src={c.image}
+                  alt=""
+                  fill
+                  className="img-zoom object-cover"
+                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  unoptimized={c.image.includes("supabase.co")}
+                />
+                <span
+                  className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent"
+                  aria-hidden
+                />
+                <span className="absolute inset-x-4 bottom-4 text-white">
+                  <span className="block font-display text-xl font-semibold">
+                    {c.city}
+                  </span>
+                  <span className="text-sm text-white/80">
+                    {c.count} {c.count === 1 ? "stay" : "stays"}
+                  </span>
                 </span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* How it works */}
       <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
         <h2 className="text-2xl font-semibold sm:text-3xl">How booking works</h2>
         <ol className="mt-8 grid gap-10 sm:grid-cols-3">

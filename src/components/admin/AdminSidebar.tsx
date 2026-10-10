@@ -14,6 +14,7 @@ import {
   X,
   Tags,
   Briefcase,
+  UserCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +26,7 @@ const links = [
   { href: adminPath("/properties"), label: "Properties", icon: Building2 },
   { href: adminPath("/types"), label: "Property types", icon: Tags },
   { href: adminPath("/agencies"), label: "Agencies", icon: Briefcase },
+  { href: adminPath("/hosts"), label: "Hosts", icon: UserCircle },
   { href: adminPath("/bookings"), label: "Bookings", icon: CalendarCheck },
   { href: adminPath("/users"), label: "Users", icon: Users },
   { href: adminPath("/settings"), label: "Settings", icon: Settings },

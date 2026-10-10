@@ -1,15 +1,18 @@
-import { properties as staticProperties } from "@/data/properties";
-import type { Property, Booking, Profile, DashboardStats } from "@/lib/types";
+import type { Property, Booking, Profile, DashboardStats, PropertyTypeRow } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
+/** Always fetch fresh data from Supabase (no static placeholder fallback). */
+export const dynamic = "force-dynamic";
+
 function mapDbProperty(row: Record<string, unknown>): Property {
+  const typeSlug = String(row.type_slug || row.type || "apartment");
   return {
     id: String(row.id),
     title: String(row.title),
     location: String(row.location),
     city: String(row.city),
     country: String(row.country),
-    type: row.type as Property["type"],
+    type: typeSlug,
     pricePerNight: Number(row.price_per_night_usd),
     rating: Number(row.rating ?? 0),
     reviewCount: Number(row.review_count ?? 0),
@@ -19,19 +22,36 @@ function mapDbProperty(row: Record<string, unknown>): Property {
     baths: Number(row.baths),
     description: String(row.description ?? ""),
     amenities: (row.amenities as string[]) ?? [],
-    images: (row.images as string[]) ?? [],
+    images: ((row.images as string[]) ?? []).filter(Boolean),
     highlights: (row.highlights as string[]) ?? [],
-    host: {
-      name: String(row.host_name ?? "Host"),
-      avatar: String(row.host_avatar ?? ""),
-      joined: String(row.host_joined ?? ""),
-      isSuperhost: Boolean(row.is_superhost),
-    },
+    host: (() => {
+      const h = row.hosts as Record<string, unknown> | null | undefined;
+      if (h && typeof h === "object") {
+        return {
+          name: String(h.name ?? row.host_name ?? "Host"),
+          avatar: String(h.avatar_url ?? row.host_avatar ?? ""),
+          joined: String(h.joined_year ?? row.host_joined ?? ""),
+          isSuperhost: Boolean(h.is_superhost ?? row.is_superhost),
+        };
+      }
+      return {
+        name: String(row.host_name ?? "Host"),
+        avatar: String(row.host_avatar ?? ""),
+        joined: String(row.host_joined ?? ""),
+        isSuperhost: Boolean(row.is_superhost),
+      };
+    })(),
+    hostId: row.host_id ? String(row.host_id) : null,
     coordinates: {
       lat: Number(row.lat ?? 0),
       lng: Number(row.lng ?? 0),
     },
     isPublished: row.is_published !== false,
+    agencyId: row.agency_id ? String(row.agency_id) : null,
+    agencyName:
+      row.agencies && typeof row.agencies === "object"
+        ? String((row.agencies as { name?: string }).name ?? "")
+        : null,
   };
 }
 
@@ -54,7 +74,8 @@ function mapDbBooking(row: Record<string, unknown>): Booking {
     serviceFeeUsd: Number(row.service_fee_usd),
     totalUsd: Number(row.total_usd),
     currency: (row.currency as "USD" | "NGN") ?? "USD",
-    totalDisplay: row.total_display != null ? Number(row.total_display) : undefined,
+    totalDisplay:
+      row.total_display != null ? Number(row.total_display) : undefined,
     status: row.status as Booking["status"],
     notes: row.notes ? String(row.notes) : undefined,
     createdAt: String(row.created_at),
@@ -66,70 +87,90 @@ export async function getProperties(opts?: {
 }): Promise<Property[]> {
   const supabase = await createClient();
   if (!supabase) {
-    return staticProperties.map((p) => ({ ...p, isPublished: true }));
+    console.warn("[data] Supabase not configured — returning no properties");
+    return [];
   }
 
-  let q = supabase.from("properties").select("*").order("created_at", { ascending: false });
+  let q = supabase
+    .from("properties")
+    .select("*, agencies(name), hosts(name, avatar_url, joined_year, is_superhost)")
+    .order("created_at", { ascending: false });
+
   if (opts?.publishedOnly !== false) {
     q = q.eq("is_published", true);
   }
+
   const { data, error } = await q;
-  if (error || !data?.length) {
-    return staticProperties.map((p) => ({ ...p, isPublished: true }));
+  if (error) {
+    console.error("[data] getProperties:", error.message);
+    return [];
   }
-  return data.map(mapDbProperty);
+  return (data || []).map(mapDbProperty);
 }
 
 export async function getPropertyById(id: string): Promise<Property | null> {
   const supabase = await createClient();
-  if (!supabase) {
-    const p = staticProperties.find((x) => x.id === id);
-    return p ? { ...p, isPublished: true } : null;
-  }
+  if (!supabase) return null;
 
-  const { data, error } = await supabase.from("properties").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("properties")
+    .select("*, agencies(name), hosts(name, avatar_url, joined_year, is_superhost)")
+    .eq("id", id)
+    .maybeSingle();
+
   if (error || !data) {
-    const p = staticProperties.find((x) => x.id === id);
-    return p ? { ...p, isPublished: true } : null;
+    if (error) console.error("[data] getPropertyById:", error.message);
+    return null;
   }
   return mapDbProperty(data);
 }
 
 export async function getAllPropertiesAdmin(): Promise<Property[]> {
   const supabase = await createClient();
-  if (!supabase) {
-    return staticProperties.map((p) => ({ ...p, isPublished: true }));
-  }
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("properties")
-    .select("*")
+    .select("*, agencies(name), hosts(name, avatar_url, joined_year, is_superhost)")
     .order("created_at", { ascending: false });
-  if (error || !data) return staticProperties.map((p) => ({ ...p, isPublished: true }));
-  return data.map(mapDbProperty);
+
+  if (error) {
+    console.error("[data] getAllPropertiesAdmin:", error.message);
+    return [];
+  }
+  return (data || []).map(mapDbProperty);
 }
 
 export async function getBookings(): Promise<Booking[]> {
   const supabase = await createClient();
-  if (!supabase) return getDemoBookings();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from("bookings")
     .select("*, properties(title)")
     .order("created_at", { ascending: false });
-  if (error || !data) return getDemoBookings();
-  return data.map(mapDbBooking);
+
+  if (error) {
+    console.error("[data] getBookings:", error.message);
+    return [];
+  }
+  return (data || []).map(mapDbBooking);
 }
 
 export async function getProfiles(): Promise<Profile[]> {
   const supabase = await createClient();
-  if (!supabase) return getDemoProfiles();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .order("created_at", { ascending: false });
-  if (error || !data) return getDemoProfiles();
-  return data.map((row) => ({
+
+  if (error) {
+    console.error("[data] getProfiles:", error.message);
+    return [];
+  }
+  return (data || []).map((row) => ({
     id: String(row.id),
     email: String(row.email ?? ""),
     fullName: String(row.full_name ?? ""),
@@ -148,106 +189,95 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     getProfiles(),
   ]);
 
-  const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "completed");
+  const confirmed = bookings.filter(
+    (b) => b.status === "confirmed" || b.status === "completed"
+  );
+
   return {
     totalProperties: properties.length,
-    publishedProperties: properties.filter((p) => p.isPublished !== false).length,
+    publishedProperties: properties.filter((p) => p.isPublished).length,
     totalBookings: bookings.length,
     pendingBookings: bookings.filter((b) => b.status === "pending").length,
     confirmedBookings: confirmed.length,
     revenueUsd: confirmed.reduce((s, b) => s + b.totalUsd, 0),
     totalUsers: users.length,
-    recentBookings: bookings.slice(0, 5),
+    recentBookings: bookings.slice(0, 8),
   };
 }
 
-function getDemoBookings(): Booking[] {
-  return [
-    {
-      id: "demo-b1",
-      propertyId: "1",
-      propertyTitle: "Sunset Cliff Villa with Infinity Pool",
-      guestName: "Chioma Adebayo",
-      guestEmail: "chioma@example.com",
-      guestPhone: "+234 801 234 5678",
-      checkIn: "2026-11-10",
-      checkOut: "2026-11-15",
-      guests: 4,
-      nights: 5,
-      pricePerNightUsd: 420,
-      cleaningFeeUsd: 75,
-      serviceFeeUsd: 252,
-      totalUsd: 2427,
-      currency: "NGN",
-      totalDisplay: 2427 * 1600,
-      status: "confirmed",
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-    {
-      id: "demo-b2",
-      propertyId: "3",
-      propertyTitle: "Modern Loft in the Heart of Tokyo",
-      guestName: "James Wilson",
-      guestEmail: "james@example.com",
-      checkIn: "2026-12-01",
-      checkOut: "2026-12-05",
-      guests: 2,
-      nights: 4,
-      pricePerNightUsd: 195,
-      cleaningFeeUsd: 75,
-      serviceFeeUsd: 94,
-      totalUsd: 949,
-      currency: "USD",
-      status: "pending",
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: "demo-b3",
-      propertyId: "7",
-      propertyTitle: "Forest Cabin with Hot Tub",
-      guestName: "Amara Okonkwo",
-      guestEmail: "amara@example.com",
-      checkIn: "2026-10-20",
-      checkOut: "2026-10-23",
-      guests: 2,
-      nights: 3,
-      pricePerNightUsd: 265,
-      cleaningFeeUsd: 75,
-      serviceFeeUsd: 95,
-      totalUsd: 965,
-      currency: "NGN",
-      status: "completed",
-      createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    },
-  ];
+export function filterPropertiesList(
+  list: Property[],
+  filters: {
+    location?: string;
+    type?: string;
+    guests?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    beds?: number;
+  }
+): Property[] {
+  return list.filter((p) => {
+    if (filters.location) {
+      const q = filters.location.toLowerCase();
+      const hay = `${p.location} ${p.city} ${p.country}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (filters.type && filters.type !== "all" && p.type !== filters.type) {
+      return false;
+    }
+    if (filters.guests && p.guests < filters.guests) return false;
+    if (filters.beds && p.bedrooms < filters.beds) return false;
+    if (filters.minPrice != null && p.pricePerNight < filters.minPrice)
+      return false;
+    if (filters.maxPrice != null && p.pricePerNight > filters.maxPrice)
+      return false;
+    return true;
+  });
 }
 
-function getDemoProfiles(): Profile[] {
-  return [
-    {
-      id: "demo-u1",
-      email: "admin@neststay.com",
-      fullName: "Apartee Admin",
-      role: "admin",
-      country: "NG",
-      createdAt: "2025-01-01T00:00:00Z",
-    },
-    {
-      id: "demo-u2",
-      email: "chioma@example.com",
-      fullName: "Chioma Adebayo",
-      role: "guest",
-      country: "NG",
-      phone: "+234 801 234 5678",
-      createdAt: "2026-06-15T00:00:00Z",
-    },
-    {
-      id: "demo-u3",
-      email: "james@example.com",
-      fullName: "James Wilson",
-      role: "guest",
-      country: "US",
-      createdAt: "2026-08-20T00:00:00Z",
-    },
-  ];
+
+function mapTypeRow(r: Record<string, unknown>): PropertyTypeRow {
+  return {
+    id: String(r.id),
+    slug: String(r.slug),
+    label: String(r.label),
+    description: r.description ? String(r.description) : "",
+    isActive: r.is_active !== false,
+    sortOrder: Number(r.sort_order ?? 0),
+    showInNav: Boolean(r.show_in_nav),
+  };
+}
+
+/** All active types (for search / listings filters) */
+export async function getActivePropertyTypes(): Promise<PropertyTypeRow[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("property_types")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order");
+  if (error || !data) {
+    if (error) console.error("[data] getActivePropertyTypes:", error.message);
+    return [];
+  }
+  return data.map(mapTypeRow);
+}
+
+/** Types featured in the navbar (max 5) */
+export async function getNavPropertyTypes(): Promise<PropertyTypeRow[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("property_types")
+    .select("*")
+    .eq("is_active", true)
+    .eq("show_in_nav", true)
+    .order("sort_order")
+    .limit(5);
+  if (error || !data) {
+    if (error) console.error("[data] getNavPropertyTypes:", error.message);
+    return [];
+  }
+  return data.map(mapTypeRow);
 }

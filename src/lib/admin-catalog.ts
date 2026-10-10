@@ -1,12 +1,12 @@
-import type { Agency, PropertyTypeRow } from "@/lib/types";
+import type { Agency, Host, PropertyTypeRow } from "@/lib/types";
 
 const TYPES_KEY = "apartee_property_types";
 const AGENCIES_KEY = "apartee_agencies";
 
 export const DEFAULT_TYPES: PropertyTypeRow[] = [
-  { id: "t1", slug: "apartment", label: "Apartment", isActive: true, sortOrder: 1 },
-  { id: "t2", slug: "villa", label: "Villa", isActive: true, sortOrder: 2 },
-  { id: "t3", slug: "hotel", label: "Hotel", isActive: true, sortOrder: 3 },
+  { id: "t1", slug: "apartment", label: "Apartment", isActive: true, sortOrder: 1, showInNav: true },
+  { id: "t2", slug: "villa", label: "Villa", isActive: true, sortOrder: 2, showInNav: true },
+  { id: "t3", slug: "hotel", label: "Hotel", isActive: true, sortOrder: 3, showInNav: false },
   { id: "t4", slug: "cabin", label: "Cabin", isActive: true, sortOrder: 4 },
   { id: "t5", slug: "cottage", label: "Cottage", isActive: true, sortOrder: 5 },
 ];
@@ -52,4 +52,15 @@ export function slugify(label: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "type";
+}
+
+
+const HOSTS_KEY = "apartee_hosts";
+
+export function loadDemoHosts(): Host[] {
+  return read(HOSTS_KEY, [] as Host[]);
+}
+
+export function saveDemoHosts(rows: Host[]) {
+  write(HOSTS_KEY, rows);
 }

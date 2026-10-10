@@ -1,4 +1,4 @@
-import Image from "next/image";
+import SafeImage from "@/components/SafeImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -16,6 +16,9 @@ import Gallery from "@/components/Gallery";
 import ExpandableText from "@/components/ExpandableText";
 import AmenityGrid from "@/components/AmenityGrid";
 import MobileReserveBar from "@/components/MobileReserveBar";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -102,9 +105,18 @@ export default async function PropertyPage({ params, searchParams }: PageProps) 
 
           {/* Host */}
           <section className="mt-10 flex items-center gap-4 border-t border-border pt-10">
-            <div className="relative size-14 shrink-0 overflow-hidden rounded-full bg-surface">
-              {property.host.avatar && (
-                <Image src={property.host.avatar} alt="" fill className="object-cover" sizes="56px" />
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-border bg-surface">
+              {property.host.avatar ? (
+                <SafeImage
+                  src={property.host.avatar}
+                  alt={property.host.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <span className="flex size-full items-center justify-center text-lg font-semibold text-muted">
+                  {(property.host.name || "H").charAt(0).toUpperCase()}
+                </span>
               )}
             </div>
             <div>
@@ -171,19 +183,6 @@ export default async function PropertyPage({ params, searchParams }: PageProps) 
                   <ExternalLink className="size-4" aria-hidden />
                 </a>
               )}
-            </div>
-          </section>
-
-          {/* Cancellation */}
-          <section className="mt-10 border-t border-border pt-10">
-            <h2 className="mb-4 text-xl font-semibold">Before you book</h2>
-            <div className="flex items-start gap-3 text-[15px]">
-              <CalendarX2 className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden />
-              <p className="max-w-prose leading-relaxed text-muted">
-                Many stays offer free cancellation up to 48 hours before
-                check-in. The cleaning and service fees are shown in your
-                price breakdown before you pay.
-              </p>
             </div>
           </section>
         </div>
