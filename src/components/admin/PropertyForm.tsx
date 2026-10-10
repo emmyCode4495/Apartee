@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Agency, Host, Property, PropertyTypeRow } from "@/lib/types";
+import type { Agency, AvailabilityStatus, Host, Property, PropertyTypeRow } from "@/lib/types";
 import { adminPath } from "@/lib/admin-path";
 import MediaField from "@/components/admin/MediaField";
 import {
@@ -46,6 +46,12 @@ export default function PropertyForm({ initial }: Props) {
     (initial?.highlights ?? []).join(", ")
   );
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true);
+  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>(
+    initial?.availabilityStatus ?? "available"
+  );
+  const [availableFrom, setAvailableFrom] = useState(
+    initial?.availableFrom ?? ""
+  );
 
   useEffect(() => {
     async function load() {
@@ -141,6 +147,11 @@ export default function PropertyForm({ initial }: Props) {
         .map((s) => s.trim())
         .filter(Boolean),
       is_published: isPublished,
+      availability_status: availabilityStatus,
+      available_from:
+        availabilityStatus === "booked" && availableFrom
+          ? availableFrom
+          : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -373,6 +384,42 @@ export default function PropertyForm({ initial }: Props) {
             bucket="property-images"
             accept="image/*"
           />
+        </div>
+        <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Availability</label>
+            <select
+              className={field}
+              value={availabilityStatus}
+              onChange={(e) =>
+                setAvailabilityStatus(e.target.value as AvailabilityStatus)
+              }
+            >
+              <option value="available">Available</option>
+              <option value="booked">Booked</option>
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              Use Booked for offline reservations too. Platform bookings update
+              this automatically.
+            </p>
+          </div>
+          {availabilityStatus === "booked" && (
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Free from (date)
+              </label>
+              <input
+                type="date"
+                className={field}
+                required={availabilityStatus === "booked"}
+                value={availableFrom}
+                onChange={(e) => setAvailableFrom(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-muted">
+                Guests can book stays starting on or after this date.
+              </p>
+            </div>
+          )}
         </div>
         <div className="sm:col-span-2 flex items-center gap-2">
           <input

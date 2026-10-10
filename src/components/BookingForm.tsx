@@ -199,6 +199,17 @@ export default function BookingForm({
       const supabase = createClient();
       if (supabase) {
         await supabase.from("bookings").insert(payload);
+        // Auto-mark listing as booked until checkout (free from that date)
+        if (payload.property_id && checkOut) {
+          await supabase
+            .from("properties")
+            .update({
+              availability_status: "booked",
+              available_from: checkOut,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", payload.property_id);
+        }
       }
     }
 

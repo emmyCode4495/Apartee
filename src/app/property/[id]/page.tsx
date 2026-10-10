@@ -16,6 +16,7 @@ import Gallery from "@/components/Gallery";
 import ExpandableText from "@/components/ExpandableText";
 import AmenityGrid from "@/components/AmenityGrid";
 import MobileReserveBar from "@/components/MobileReserveBar";
+import AvailabilityBadge from "@/components/AvailabilityBadge";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -183,6 +184,19 @@ export default async function PropertyPage({ params, searchParams }: PageProps) 
                   <ExternalLink className="size-4" aria-hidden />
                 </a>
               )}
+            </div>
+          </section>
+
+          {/* Cancellation */}
+          <section className="mt-10 border-t border-border pt-10">
+            <h2 className="mb-4 text-xl font-semibold">Before you book</h2>
+            <div className="flex items-start gap-3 text-[15px]">
+              <CalendarX2 className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden />
+              <p className="max-w-prose leading-relaxed text-muted">
+                Many stays offer free cancellation up to 48 hours before
+                check-in. The cleaning and service fees are shown in your
+                price breakdown before you pay.
+              </p>
             </div>
           </section>
         </div>

@@ -84,6 +84,15 @@ export default function BookingWidget({
       id="booking"
       className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6"
     >
+      {property.availabilityStatus === "booked" && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          Currently booked
+          {property.availableFrom
+            ? ` — free from ${property.availableFrom}`
+            : ""}. You can still request dates from that day onward.
+        </div>
+      )}
+
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <p>
           <span className="font-display text-2xl font-semibold">

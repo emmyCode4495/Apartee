@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FloatingChatbot from "@/components/FloatingChatbot";
 import { getAdminBasePath } from "@/lib/admin-path";
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         {children}
       </main>
       <Footer />
+      <FloatingChatbot />
     </>
   );
 }

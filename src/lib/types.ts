@@ -1,5 +1,6 @@
 /** Built-in defaults; admins can add more via property_types table */
 export type PropertyType = string;
+export type AvailabilityStatus = "available" | "booked";
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
 export type UserRole = "guest" | "host" | "admin";
 
@@ -78,6 +79,9 @@ export interface Property {
   /** null / undefined = public listing (not tied to an agency) */
   agencyId?: string | null;
   agencyName?: string | null;
+  availabilityStatus?: AvailabilityStatus;
+  /** YYYY-MM-DD — when booked, first free night / free-from date */
+  availableFrom?: string | null;
 }
 
 export interface Booking {

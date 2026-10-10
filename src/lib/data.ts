@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 /** Always fetch fresh data from Supabase (no static placeholder fallback). */
 export const dynamic = "force-dynamic";
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function mapDbProperty(row: Record<string, unknown>): Property {
   const typeSlug = String(row.type_slug || row.type || "apartment");
   return {
@@ -47,6 +52,18 @@ function mapDbProperty(row: Record<string, unknown>): Property {
       lng: Number(row.lng ?? 0),
     },
     isPublished: row.is_published !== false,
+    availabilityStatus: (() => {
+      const status = row.availability_status === "booked" ? "booked" : "available";
+      const from = row.available_from ? String(row.available_from).slice(0, 10) : null;
+      if (status === "booked" && from && from <= todayISO()) return "available";
+      return status;
+    })() as Property["availabilityStatus"],
+    availableFrom: (() => {
+      const status = row.availability_status === "booked" ? "booked" : "available";
+      const from = row.available_from ? String(row.available_from).slice(0, 10) : null;
+      if (status === "booked" && from && from <= todayISO()) return null;
+      return status === "booked" ? from : null;
+    })(),
     agencyId: row.agency_id ? String(row.agency_id) : null,
     agencyName:
       row.agencies && typeof row.agencies === "object"

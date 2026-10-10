@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Property } from "@/lib/types";
 import Price from "@/components/Price";
+import AvailabilityBadge from "@/components/AvailabilityBadge";
 import { useSaved } from "@/contexts/SavedContext";
 
 interface PropertyCardProps {
@@ -53,6 +54,9 @@ export default function PropertyCard({
   return (
     <article className="group">
       <div className="relative overflow-hidden rounded-xl bg-surface">
+        <div className="pointer-events-none absolute left-2 top-2 z-20">
+          <AvailabilityBadge status={property.availabilityStatus} />
+        </div>
         <div
           ref={scroller}
           onScroll={onScroll}
@@ -142,6 +146,12 @@ export default function PropertyCard({
         <p className="mt-0.5 line-clamp-1 text-sm text-muted">
           {cap(property.type)} in {property.location}
         </p>
+        <div className="mt-2">
+          <AvailabilityBadge
+            status={property.availabilityStatus}
+            availableFrom={property.availableFrom}
+          />
+        </div>
 
         <p className="mt-2 flex items-center gap-4 text-sm text-muted">
           <span className="inline-flex items-center gap-1.5">
