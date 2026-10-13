@@ -258,28 +258,6 @@ export default function BookingForm({
     }
 
     // Open mail client with secured receipt (always works without SMTP)
-    const receiptBody = [
-      "APATMENTZ PAYMENT RECEIPT (pending admin confirmation)",
-      "========================================",
-      `Payment ID: ${paymentRef}`,
-      `Guest: ${values.name}`,
-      `Email: ${values.email}`,
-      `Stay: ${propertyTitle}`,
-      `Check-in: ${checkIn}`,
-      `Check-out: ${checkOut}`,
-      `Amount: ${currency} ${amountDisplay}`,
-      `Bank: ${bank.bankName} / ${bank.accountName} / ${bank.accountNumber}`,
-      signature ? `Integrity seal: ${signature.slice(0, 16)}…` : "",
-      "",
-      "Do not edit this reference. Admin will match this Payment ID to your transfer.",
-      "Booking is not confirmed until payment is verified.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    window.location.href = `mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent(
-      `Apatmentz receipt ${paymentRef}`
-    )}&body=${encodeURIComponent(receiptBody)}`;
 
     setPhase("claimed");
     setLoading(false);
@@ -297,7 +275,7 @@ export default function BookingForm({
         </div>
         <h2 className="text-2xl font-semibold">Payment claim received</h2>
         <p className="mx-auto mt-2 max-w-sm text-muted">
-          A receipt with your unique Payment ID was prepared for{" "}
+          A receipt with your unique Payment ID was emailed to{" "}
           <strong className="text-foreground">{values.email}</strong>. Admin will
           confirm the transfer, then confirm your booking.
         </p>

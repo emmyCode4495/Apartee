@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Agency, AvailabilityStatus, Host, Property, PropertyTypeRow } from "@/lib/types";
+import type { Agency, Host, Property, PropertyTypeRow } from "@/lib/types";
 import { adminPath } from "@/lib/admin-path";
+import { convertNgnToUsd, convertUsdToNgn, USD_TO_NGN } from "@/lib/currency";
 import MediaField from "@/components/admin/MediaField";
 import {
   DEFAULT_TYPES,
@@ -32,7 +33,9 @@ export default function PropertyForm({ initial }: Props) {
   const [type, setType] = useState(initial?.type ?? "apartment");
   const [agencyId, setAgencyId] = useState<string>(initial?.agencyId ?? "");
   const [hostId, setHostId] = useState<string>(initial?.hostId ?? "");
-  const [price, setPrice] = useState(String(initial?.pricePerNight ?? ""));
+  const [priceNgn, setPriceNgn] = useState(
+    String(initial?.pricePerNight != null ? convertUsdToNgn(initial.pricePerNight) : "")
+  );
   const [guests, setGuests] = useState(String(initial?.guests ?? 2));
   const [bedrooms, setBedrooms] = useState(String(initial?.bedrooms ?? 1));
   const [beds, setBeds] = useState(String(initial?.beds ?? 1));
@@ -46,12 +49,6 @@ export default function PropertyForm({ initial }: Props) {
     (initial?.highlights ?? []).join(", ")
   );
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true);
-  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>(
-    initial?.availabilityStatus ?? "available"
-  );
-  const [availableFrom, setAvailableFrom] = useState(
-    initial?.availableFrom ?? ""
-  );
 
   useEffect(() => {
     async function load() {
@@ -131,7 +128,7 @@ export default function PropertyForm({ initial }: Props) {
       host_avatar: selectedHost?.avatarUrl ?? null,
       host_joined: selectedHost?.joinedYear ?? null,
       is_superhost: selectedHost?.isSuperhost ?? false,
-      price_per_night_usd: Number(price),
+      price_per_night_usd: convertNgnToUsd(Number(priceNgn)),
       guests: Number(guests),
       bedrooms: Number(bedrooms),
       beds: Number(beds),
@@ -147,11 +144,6 @@ export default function PropertyForm({ initial }: Props) {
         .map((s) => s.trim())
         .filter(Boolean),
       is_published: isPublished,
-      availability_status: availabilityStatus,
-      available_from:
-        availabilityStatus === "booked" && availableFrom
-          ? availableFrom
-          : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -276,17 +268,25 @@ export default function PropertyForm({ initial }: Props) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">
-            Price / night (USD)
+            Price / night (₦ Naira)
           </label>
           <input
             className={field}
             type="number"
             min={0}
-            step="0.01"
+            step="1"
             required
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            value={priceNgn}
+            onChange={(e) => setPriceNgn(e.target.value)}
+            placeholder="e.g. 85000"
           />
+          <p className="mt-1 text-xs text-muted">
+            Primary currency is Naira. Stored as USD at ~₦{USD_TO_NGN.toLocaleString()} / $1
+            {priceNgn && Number(priceNgn) > 0
+              ? ` (≈ $${convertNgnToUsd(Number(priceNgn)).toFixed(2)} USD)`
+              : ""}
+            .
+          </p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Host</label>
@@ -384,42 +384,6 @@ export default function PropertyForm({ initial }: Props) {
             bucket="property-images"
             accept="image/*"
           />
-        </div>
-        <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Availability</label>
-            <select
-              className={field}
-              value={availabilityStatus}
-              onChange={(e) =>
-                setAvailabilityStatus(e.target.value as AvailabilityStatus)
-              }
-            >
-              <option value="available">Available</option>
-              <option value="booked">Booked</option>
-            </select>
-            <p className="mt-1 text-xs text-muted">
-              Use Booked for offline reservations too. Platform bookings update
-              this automatically.
-            </p>
-          </div>
-          {availabilityStatus === "booked" && (
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Free from (date)
-              </label>
-              <input
-                type="date"
-                className={field}
-                required={availabilityStatus === "booked"}
-                value={availableFrom}
-                onChange={(e) => setAvailableFrom(e.target.value)}
-              />
-              <p className="mt-1 text-xs text-muted">
-                Guests can book stays starting on or after this date.
-              </p>
-            </div>
-          )}
         </div>
         <div className="sm:col-span-2 flex items-center gap-2">
           <input

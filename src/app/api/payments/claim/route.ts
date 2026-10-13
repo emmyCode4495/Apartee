@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyPaymentSignature } from "@/lib/payment-secure";
+import { sendPaymentReceiptEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { paymentRef, bookingId, guestEmail, signature, checkIn, checkOut, currency, amountDisplay } =
-      body;
+    const {
+      paymentRef,
+      bookingId,
+      guestEmail,
+      guestName,
+      propertyTitle,
+      signature,
+      checkIn,
+      checkOut,
+      currency,
+      amountDisplay,
+    } = body;
 
     if (!paymentRef) {
       return NextResponse.json({ error: "Payment ID required" }, { status: 400 });
@@ -17,7 +28,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, warning: "No database" });
     }
 
-    // Load booking by ref — never trust client amount alone
     const { data: row, error: findErr } = await supabase
       .from("bookings")
       .select("*")
@@ -35,7 +45,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Already confirmed" }, { status: 400 });
     }
 
-    // Optional integrity check when signature present
     if (signature && row.payment_signature) {
       const secret =
         process.env.PAYMENT_HMAC_SECRET ||
@@ -56,7 +65,10 @@ export async function POST(req: Request) {
       );
       if (!ok) {
         return NextResponse.json(
-          { error: "Integrity check failed — contact support with your Payment ID" },
+          {
+            error:
+              "Integrity check failed — contact support with your Payment ID",
+          },
           { status: 400 }
         );
       }
@@ -74,14 +86,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: upErr.message }, { status: 400 });
     }
 
+    const bank = (row.bank_account_snapshot || {}) as {
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+    };
+
+    const amountLabel = `${row.payment_currency || currency || "NGN"} ${
+      row.payment_amount_display ?? amountDisplay ?? row.total_usd
+    }`;
+
+    const emailResult = await sendPaymentReceiptEmail({
+      to: String(guestEmail || row.guest_email),
+      paymentRef,
+      guestName: String(guestName || row.guest_name || "Guest"),
+      propertyTitle: propertyTitle || undefined,
+      checkIn: String(checkIn || row.check_in),
+      checkOut: String(checkOut || row.check_out),
+      amountLabel,
+      bankName: bank.bankName || process.env.NEXT_PUBLIC_PAYMENT_BANK_NAME || "Bank",
+      accountName:
+        bank.accountName ||
+        process.env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME ||
+        "Apatmentz",
+      accountNumber:
+        bank.accountNumber ||
+        process.env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER ||
+        "",
+      integrityHint: row.payment_signature
+        ? String(row.payment_signature).slice(0, 16)
+        : undefined,
+    });
+
     return NextResponse.json({
       ok: true,
       paymentRef,
       message: "Claim recorded. Admin will verify the transfer.",
-      guestEmail,
+      guestEmail: guestEmail || row.guest_email,
       amountDisplay,
       currency,
       bookingId: bookingId || row.id,
+      email: emailResult,
     });
   } catch (e) {
     return NextResponse.json(

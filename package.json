@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^2.0.1",
+    "lucide-react": "^0.475.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "lucide-react": "^0.475.0",
-    "@supabase/supabase-js": "^2.49.1",
-    "@supabase/ssr": "^0.6.1"
+    "resend": "^6.32.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

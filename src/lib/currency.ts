@@ -1,8 +1,8 @@
-/** Base prices are stored in USD. Display currency: NGN in Nigeria, USD elsewhere. */
+/** Base prices are stored in USD internally. Admins enter NGN; site converts for display. */
 
 export type CurrencyCode = "USD" | "NGN";
 
-/** Approximate USD → NGN rate (update periodically or via API) */
+/** Approximate NGN per 1 USD (update periodically or via API) */
 export const USD_TO_NGN = 1600;
 
 export interface CurrencyInfo {
@@ -20,10 +20,21 @@ export function getCurrencyFromCountry(countryCode?: string | null): CurrencyInf
   return { code: "USD", symbol: "$", locale: "en-US", countryHint: "OTHER" };
 }
 
-/** Convert USD amount to display currency */
+/** Convert stored USD amount → display currency */
 export function convertFromUsd(amountUsd: number, currency: CurrencyCode): number {
   if (currency === "NGN") return Math.round(amountUsd * USD_TO_NGN);
   return Math.round(amountUsd * 100) / 100;
+}
+
+/** Convert admin-entered NGN → USD for storage */
+export function convertNgnToUsd(amountNgn: number): number {
+  if (!amountNgn || amountNgn <= 0) return 0;
+  return Math.round((amountNgn / USD_TO_NGN) * 100) / 100;
+}
+
+/** Convert stored USD → NGN for admin form fields */
+export function convertUsdToNgn(amountUsd: number): number {
+  return Math.round(amountUsd * USD_TO_NGN);
 }
 
 export function formatMoney(
@@ -32,9 +43,10 @@ export function formatMoney(
   options?: { compact?: boolean }
 ): string {
   const value = convertFromUsd(amountUsd, currency);
-  const info = currency === "NGN"
-    ? { code: "NGN" as const, locale: "en-NG" }
-    : { code: "USD" as const, locale: "en-US" };
+  const info =
+    currency === "NGN"
+      ? { code: "NGN" as const, locale: "en-NG" }
+      : { code: "USD" as const, locale: "en-US" };
 
   if (options?.compact && value >= 1000) {
     return new Intl.NumberFormat(info.locale, {
@@ -52,14 +64,10 @@ export function formatMoney(
   }).format(value);
 }
 
-export function formatMoneyRaw(
-  amount: number,
-  currency: CurrencyCode
-): string {
-  const locale = currency === "NGN" ? "en-NG" : "en-US";
-  return new Intl.NumberFormat(locale, {
+export function formatNgn(amountNgn: number): string {
+  return new Intl.NumberFormat("en-NG", {
     style: "currency",
-    currency,
-    maximumFractionDigits: currency === "NGN" ? 0 : 2,
-  }).format(amount);
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(amountNgn);
 }
