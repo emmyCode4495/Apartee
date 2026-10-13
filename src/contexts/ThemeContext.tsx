@@ -23,41 +23,37 @@ const STORAGE_KEY = "apartee_theme";
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === "dark") {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
+  if (theme === "dark") root.classList.add("dark");
+  else root.classList.remove("dark");
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Light is default; hydrate from localStorage after mount to avoid SSR mismatch
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [ready, setReady] = useState(false);
+function persist(theme: Theme) {
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    /* ignore */
+  }
+  // Cookie so the server can render the correct class (no <script> needed)
+  document.cookie = `${STORAGE_KEY}=${theme};path=/;max-age=31536000;samesite=lax`;
+}
+
+export function ThemeProvider({
+  children,
+  initialTheme = "light",
+}: {
+  children: React.ReactNode;
+  initialTheme?: Theme;
+}) {
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      if (stored === "dark" || stored === "light") {
-        setThemeState(stored);
-        applyTheme(stored);
-      } else {
-        applyTheme("light");
-      }
-    } catch {
-      applyTheme("light");
-    }
-    setReady(true);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
     applyTheme(t);
-    try {
-      localStorage.setItem(STORAGE_KEY, t);
-    } catch {
-      /* ignore */
-    }
+    persist(t);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -68,9 +64,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     () => ({ theme, setTheme, toggleTheme }),
     [theme, setTheme, toggleTheme]
   );
-
-  // Avoid rendering children flash is handled by inline script in layout
-  void ready;
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

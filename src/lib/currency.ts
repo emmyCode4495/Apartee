@@ -43,31 +43,36 @@ export function formatMoney(
   options?: { compact?: boolean }
 ): string {
   const value = convertFromUsd(amountUsd, currency);
+  return formatMoneyRaw(value, currency, options);
+}
+
+/** Format an amount already in the target currency (not USD). */
+export function formatMoneyRaw(
+  amount: number,
+  currency: CurrencyCode,
+  options?: { compact?: boolean }
+): string {
   const info =
     currency === "NGN"
       ? { code: "NGN" as const, locale: "en-NG" }
       : { code: "USD" as const, locale: "en-US" };
 
-  if (options?.compact && value >= 1000) {
+  if (options?.compact && amount >= 1000) {
     return new Intl.NumberFormat(info.locale, {
       style: "currency",
       currency: info.code,
       notation: "compact",
       maximumFractionDigits: 1,
-    }).format(value);
+    }).format(amount);
   }
 
   return new Intl.NumberFormat(info.locale, {
     style: "currency",
     currency: info.code,
     maximumFractionDigits: currency === "NGN" ? 0 : 2,
-  }).format(value);
+  }).format(amount);
 }
 
 export function formatNgn(amountNgn: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(amountNgn);
+  return formatMoneyRaw(amountNgn, "NGN");
 }

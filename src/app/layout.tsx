@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
@@ -35,33 +36,25 @@ export const viewport: Viewport = {
   ],
 };
 
-/** Runs before paint so the stored theme applies without a flash (light is default). */
-const themeInitScript = `
-(function(){
-  try {
-    var t = localStorage.getItem('apartee_theme');
-    if (t === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-  } catch (e) {}
-})();
-`;
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jar = await cookies();
+  const stored = jar.get("apartee_theme")?.value;
+  const theme = stored === "dark" ? "dark" : "light";
+
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} h-full antialiased${
+        theme === "dark" ? " dark" : ""
+      }`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           <AuthProvider>
             <CurrencyProvider>
               <SavedProvider>

@@ -1,5 +1,5 @@
 import { getBookings } from "@/lib/data";
-import { formatMoney, formatMoneyRaw } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
 import BookingStatusSelect from "@/components/admin/BookingStatusSelect";
 
 export default async function AdminBookingsPage() {
@@ -46,7 +46,9 @@ export default async function AdminBookingsPage() {
                     <p>
                       {b.checkIn} → {b.checkOut}
                     </p>
-                    <p className="text-xs">{b.nights} night{b.nights > 1 ? "s" : ""}</p>
+                    <p className="text-xs">
+                      {b.nights} night{b.nights > 1 ? "s" : ""}
+                    </p>
                   </td>
                   <td className="px-4 py-3">{b.guests}</td>
                   <td className="px-4 py-3">
@@ -57,7 +59,11 @@ export default async function AdminBookingsPage() {
                       <p className="text-xs text-muted">
                         Paid as{" "}
                         {b.totalDisplay != null
-                          ? formatMoneyRaw(b.totalDisplay, "NGN")
+                          ? new Intl.NumberFormat("en-NG", {
+                              style: "currency",
+                              currency: "NGN",
+                              maximumFractionDigits: 0,
+                            }).format(Number(b.totalDisplay))
                           : formatMoney(b.totalUsd, "NGN")}
                       </p>
                     )}
