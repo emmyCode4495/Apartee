@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { useAuth } from "@/contexts/AuthContext";
+import PasswordField from "@/components/auth/PasswordField";
 
 function SignupForm() {
   const router = useRouter();
@@ -102,18 +103,11 @@ function SignupForm() {
           />
         </div>
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={6}
+         <PasswordField
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={field}
+            onChange={setPassword}
+            autoComplete="new-password"
+            minLength={6}
             placeholder="At least 6 characters"
           />
         </div>

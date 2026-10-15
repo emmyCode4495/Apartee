@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { useAuth } from "@/contexts/AuthContext";
+import PasswordField from "@/components/auth/PasswordField";
 
 function LoginForm() {
   const router = useRouter();
@@ -82,17 +83,10 @@ function LoginForm() {
           />
         </div>
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
+         <PasswordField
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={field}
+            onChange={setPassword}
+            autoComplete="current-password"
             placeholder="••••••••"
           />
         </div>
