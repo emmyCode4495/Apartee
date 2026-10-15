@@ -7,7 +7,14 @@ import ListingsFilters from "@/components/ListingsFilters";
 import { getProperties, filterPropertiesList } from "@/lib/data";
 import { formatRange } from "@/lib/dates";
 
-export const metadata = { title: "Find an apartment" };
+import type { Metadata } from "next";
+import { SITE_NAME, absoluteUrl } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Find apartments & short-lets in Nigeria",
+  description: "Browse verified furnished apartments and short-lets across Nigeria on " + SITE_NAME + ".",
+  alternates: { canonical: absoluteUrl("/listings") },
+};
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

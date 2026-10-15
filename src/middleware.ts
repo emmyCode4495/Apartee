@@ -39,6 +39,6 @@ export const config = {
      * Run on all paths except static assets.
      * Needed so a custom ADMIN_BASE_PATH (any string) is rewritten.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

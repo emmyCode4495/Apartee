@@ -4,17 +4,19 @@ import Logo from "@/components/Logo";
 const COLUMNS = [
   {
     title: "Explore",
-    links: [
-      { href: "/listings", label: "All stays" },
-      { href: "/saved", label: "Saved stays" },
-    ],
+   links: [
+  { href: "/", label: "Home" },
+  { href: "/listings", label: "All stays" },
+  { href: "/saved", label: "Saved stays" },
+],
   },
   {
     title: "Support",
-    links: [
-      { href: "/help", label: "Help center" },
-      { href: "/contact", label: "Contact us" },
-    ],
+  links: [
+  { href: "/", label: "Home" },
+  { href: "/listings", label: "All stays" },
+  { href: "/saved", label: "Saved stays" },
+],
   },
 ];
 

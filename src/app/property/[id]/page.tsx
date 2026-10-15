@@ -17,6 +17,8 @@ import ExpandableText from "@/components/ExpandableText";
 import AmenityGrid from "@/components/AmenityGrid";
 import MobileReserveBar from "@/components/MobileReserveBar";
 import AvailabilityBadge from "@/components/AvailabilityBadge";
+import JsonLd from "@/components/JsonLd";
+import { absoluteUrl, truncate } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,7 +31,33 @@ interface PageProps {
 export async function generateMetadata({ params }: Pick<PageProps, "params">) {
   const { id } = await params;
   const property = await getPropertyById(id);
-  return { title: property ? property.title : "Stay not found" };
+  if (!property) {
+    return { title: "Stay not found", robots: { index: false, follow: false } };
+  }
+  const { propertyDescription, absoluteUrl, SITE_NAME } = await import("@/lib/seo");
+  const description = propertyDescription(property);
+  const url = absoluteUrl(`/property/${property.id}`);
+  const image = property.images?.[0];
+  return {
+    title: property.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      locale: "en_NG",
+      url,
+      siteName: SITE_NAME,
+      title: property.title,
+      description,
+      images: image ? [{ url: image, alt: property.title }] : [{ url: "/apatmentz-logo.png", alt: SITE_NAME }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: property.title,
+      description,
+      images: image ? [image] : ["/apatmentz-logo.png"],
+    },
+  };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -51,8 +79,30 @@ export default async function PropertyPage({ params, searchParams }: PageProps) 
     { value: property.baths, label: "Bathrooms" },
   ];
 
+  const lodgingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LodgingBusiness",
+    name: property.title,
+    description: truncate(property.description || property.title, 300),
+    url: absoluteUrl(`/property/${property.id}`),
+    image: property.images?.length ? property.images : undefined,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: property.city,
+      addressCountry: property.country,
+      streetAddress: property.location,
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: property.rating,
+      reviewCount: Math.max(1, property.reviewCount || 1),
+    },
+    numberOfRooms: property.bedrooms || 1,
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-16">
+      <JsonLd data={lodgingJsonLd} />
       <Link
         href="/listings"
         className="mb-5 inline-flex items-center gap-1 text-sm font-medium text-muted transition hover:text-foreground"

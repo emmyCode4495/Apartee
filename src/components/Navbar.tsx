@@ -23,6 +23,7 @@ export default function Navbar() {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
 const [navLinks, setNavLinks] = useState<NavLink[]>([
+  { href: "/", label: "Home" },
   { href: "/listings", label: "All stays" },
   { href: "/contact", label: "Contact us" },
 ]);
@@ -50,11 +51,12 @@ const [navLinks, setNavLinks] = useState<NavLink[]>([
         label: r.label,
       }));
       
-    setNavLinks([
-      ...featured,                              // up to 5 from admin
-      { href: "/listings", label: "All stays" },
-      { href: "/contact", label: "Contact us" }, // always present
-    ]);
+   setNavLinks([
+  { href: "/", label: "Home" },
+  ...featured,
+  { href: "/listings", label: "All stays" },
+  { href: "/contact", label: "Contact us" },
+]);
     }
     void loadNav();
   }, []);
