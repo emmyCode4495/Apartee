@@ -112,9 +112,6 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-muted">
-        Demo mode (no Supabase): any email + password works.
-      </p>
     </AuthShell>
   );
 }
