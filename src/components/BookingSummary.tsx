@@ -13,8 +13,7 @@ interface Props {
   guests: number;
   nights: number;
   subtotal: number;
-  cleaningFee: number;
-  serviceFee: number;
+  serviceCharge: number;
   total: number;
 }
 
@@ -25,8 +24,7 @@ export default function BookingSummary({
   guests,
   nights,
   subtotal,
-  cleaningFee,
-  serviceFee,
+  serviceCharge,
   total,
 }: Props) {
   const { format, currency } = useCurrency();
@@ -74,12 +72,8 @@ export default function BookingSummary({
             <dd className="tabular">{format(subtotal)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Cleaning fee</dt>
-            <dd className="tabular">{format(cleaningFee)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">Service fee</dt>
-            <dd className="tabular">{format(serviceFee)}</dd>
+            <dt className="text-muted">Service charge</dt>
+            <dd className="tabular">{format(serviceCharge)}</dd>
           </div>
           <div className="flex justify-between gap-4 border-t border-border pt-4 text-base font-semibold">
             <dt>Total ({currency})</dt>

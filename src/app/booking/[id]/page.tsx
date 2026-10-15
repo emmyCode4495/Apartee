@@ -5,6 +5,7 @@ import { getPropertyById } from "@/lib/data";
 import BookingSection from "@/components/BookingSection";
 import BookingSummary from "@/components/BookingSummary";
 import { nightsBetween } from "@/lib/dates";
+import { calcBookingTotalUsd } from "@/lib/fees";
 
 export const metadata = { title: "Review and pay" };
 
@@ -29,10 +30,10 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   const guests = sp.guests ? Number(sp.guests) : 2;
   const datesChosen = !!checkIn && !!checkOut && nightsBetween(checkIn, checkOut) > 0;
   const nights = Math.max(1, nightsBetween(checkIn, checkOut));
-  const subtotal = nights * property.pricePerNight;
-  const cleaningFee = 75;
-  const serviceFee = Math.round(subtotal * 0.12);
-  const total = subtotal + cleaningFee + serviceFee;
+  const { subtotal, serviceCharge, total } = calcBookingTotalUsd(
+    property.pricePerNight,
+    nights
+  );
 
   const back = new URLSearchParams();
   if (checkIn) back.set("checkIn", checkIn);
@@ -86,8 +87,8 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
           changeHref={`/property/${id}?${back.toString()}`}
           pricePerNightUsd={property.pricePerNight}
           totalUsd={total}
-          cleaningFeeUsd={cleaningFee}
-          serviceFeeUsd={serviceFee}
+          serviceChargeUsd={serviceCharge}
+          
         />
 
         <BookingSummary
@@ -97,8 +98,8 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
           guests={guests}
           nights={nights}
           subtotal={subtotal}
-          cleaningFee={cleaningFee}
-          serviceFee={serviceFee}
+          serviceCharge={serviceCharge}
+          
           total={total}
         />
       </div>

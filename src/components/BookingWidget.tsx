@@ -7,7 +7,12 @@ import type { Property } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Price from "@/components/Price";
+
 import { nightsBetween } from "@/lib/dates";
+import {
+  calcBookingTotalUsd,
+  serviceChargePercentLabel,
+} from "@/lib/fees";
 
 interface BookingWidgetProps {
   property: Property;
@@ -51,10 +56,10 @@ export default function BookingWidget({
     [checkIn, checkOut]
   );
 
-  const subtotal = nights * property.pricePerNight;
-  const cleaningFee = nights > 0 ? 75 : 0;
-  const serviceFee = nights > 0 ? Math.round(subtotal * 0.12) : 0;
-  const total = subtotal + cleaningFee + serviceFee;
+  const { subtotal, serviceCharge, total } = calcBookingTotalUsd(
+    property.pricePerNight,
+    nights
+  );
 
   const field =
     "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-primary";
@@ -204,12 +209,10 @@ export default function BookingWidget({
             <dd className="tabular">{format(subtotal)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Cleaning fee</dt>
-            <dd className="tabular">{format(cleaningFee)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">Service fee</dt>
-            <dd className="tabular">{format(serviceFee)}</dd>
+            <dt className="text-muted">
+              Service charge ({serviceChargePercentLabel(nights)})
+            </dt>
+            <dd className="tabular">{format(serviceCharge)}</dd>
           </div>
           <div className="flex justify-between gap-4 border-t border-border pt-4 text-base font-semibold">
             <dt>Total ({currency})</dt>

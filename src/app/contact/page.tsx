@@ -49,10 +49,10 @@ export default function ContactPage() {
             <div>
               <p className="font-semibold">Email</p>
               <a
-                href="mailto:hello@apatmentz.com"
+                href="mailto:apatmentzsupport@gmail.com"
                 className="text-sm text-primary hover:underline"
               >
-                hello@apatmentz.com
+               apatmentzsupport@gmail.com
               </a>
             </div>
           </div>
@@ -62,8 +62,10 @@ export default function ContactPage() {
             </span>
             <div>
               <p className="font-semibold">Phone</p>
-              <p className="text-sm text-muted">+234 (0) 800 000 0000</p>
-              <p className="text-xs text-muted">Mon–Fri, 9:00–17:00 WAT</p>
+               <p className="text-sm text-muted">+234 9051 13 3418</p>
+              <p className="text-sm text-muted">+234 8088 63 8787</p>
+              <p className="text-sm text-muted">+234 8136 28 4463</p>
+              <p className="text-xs text-muted">Mon–Sun, 24/7 support</p>
             </div>
           </div>
           <div className="flex gap-3 rounded-2xl border border-border bg-card p-4">
@@ -72,7 +74,7 @@ export default function ContactPage() {
             </span>
             <div>
               <p className="font-semibold">Office</p>
-              <p className="text-sm text-muted">Lagos, Nigeria</p>
+              <p className="text-sm text-muted">Abuja, Nigeria</p>
             </div>
           </div>
           <p className="text-sm text-muted">

@@ -29,8 +29,7 @@ interface BookingFormProps {
   changeHref: string;
   pricePerNightUsd: number;
   totalUsd: number;
-  cleaningFeeUsd: number;
-  serviceFeeUsd: number;
+  serviceChargeUsd: number;
 }
 
 type GuestValues = { name: string; email: string; phone: string };
@@ -72,8 +71,7 @@ export default function BookingForm({
   changeHref,
   pricePerNightUsd,
   totalUsd,
-  cleaningFeeUsd,
-  serviceFeeUsd,
+  serviceChargeUsd,
 }: BookingFormProps) {
   const { format, currency } = useCurrency();
   const { user } = useAuth();
@@ -146,8 +144,7 @@ export default function BookingForm({
           guests,
           nights,
           pricePerNightUsd,
-          cleaningFeeUsd,
-          serviceFeeUsd,
+          serviceChargeUsd,
           totalUsd,
           currency,
           amountDisplay,
@@ -183,8 +180,8 @@ export default function BookingForm({
               guests,
               nights,
               price_per_night_usd: pricePerNightUsd,
-              cleaning_fee_usd: cleaningFeeUsd,
-              service_fee_usd: serviceFeeUsd,
+              cleaning_fee_usd: 0,
+              service_fee_usd: serviceChargeUsd,
               total_usd: totalUsd,
               currency: currency as CurrencyCode,
               total_display: amountDisplay,

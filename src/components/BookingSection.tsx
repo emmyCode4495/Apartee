@@ -15,8 +15,7 @@ interface Props {
   changeHref: string;
   pricePerNightUsd: number;
   totalUsd: number;
-  cleaningFeeUsd: number;
-  serviceFeeUsd: number;
+  serviceChargeUsd: number;
 }
 
 export default function BookingSection(props: Props) {
